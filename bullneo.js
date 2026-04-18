@@ -11,10 +11,13 @@
   const OPEN_BUTTON_CLASS = "bullneo-open";
   const INLINE_STYLE_ID = "bullneo-inline-style";
   const ASSET_MARKER = "data-bullneo-asset";
+  const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
+  const FORM_SELECTOR = "form";
+  const FILE_NAME_CANDIDATES = ["upfile", "up"];
 
   const existing = window.BullNeo;
-  if (existing && typeof existing.open === "function") {
-    existing.open();
+  if (existing && typeof existing.install === "function") {
+    existing.install();
     return;
   }
 
@@ -23,6 +26,7 @@
     targetForm: null,
     neoReady: false,
     mounted: false,
+    observer: null,
   };
 
   function detectBaseUrl() {
@@ -33,7 +37,9 @@
     if (window.BULLNEO_BASE_URL) {
       return new URL(".", window.BULLNEO_BASE_URL).href;
     }
-    throw new Error("bullneo.js の配置URLを特定できませんでした。");
+    throw new Error(
+      "bullneo.js \u306e\u914d\u7f6eURL\u3092\u7279\u5b9a\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
+    );
   }
 
   function resolveAsset(path) {
@@ -58,6 +64,7 @@
       const script = document.createElement("script");
       script.src = src;
       script.async = true;
+      script.charset = "UTF-8";
       script.setAttribute(ASSET_MARKER, src);
       script.addEventListener(
         "load",
@@ -69,7 +76,14 @@
       );
       script.addEventListener(
         "error",
-        () => reject(new Error(`${src} の読み込みに失敗しました。`)),
+        () => {
+          reject(
+            new Error(
+              src +
+                " \u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002",
+            ),
+          );
+        },
         { once: true },
       );
       document.head.appendChild(script);
@@ -150,8 +164,7 @@
   width: 90px;
 }
 
-#${PANEL_ID} button,
-.${OPEN_BUTTON_CLASS} {
+#${PANEL_ID} button {
   appearance: none;
   border: 1px solid #8f7757;
   background: #fffaf0;
@@ -163,7 +176,7 @@
 }
 
 #${PANEL_ID} button:hover,
-.${OPEN_BUTTON_CLASS}:hover {
+#${PANEL_ID} button:hover {
   background: #fff2cd;
 }
 
@@ -174,6 +187,13 @@
 
 #${MOUNT_ID} {
   min-height: 520px;
+}
+
+a.${OPEN_BUTTON_CLASS} {
+  color: #0645ad;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-left: 0.5em;
 }
 `;
     document.head.appendChild(style);
@@ -199,7 +219,15 @@
   }
 
   function findFileInput(form) {
-    return form ? form.querySelector(FILE_INPUT_SELECTOR) : null;
+    if (!form) return null;
+    const inputs = Array.from(form.querySelectorAll(FILE_INPUT_SELECTOR));
+    return (
+      inputs.find((input) =>
+        FILE_NAME_CANDIDATES.includes((input.name || "").toLowerCase()),
+      ) ||
+      inputs[0] ||
+      null
+    );
   }
 
   function findImageNoneCheckbox(form) {
@@ -209,7 +237,9 @@
     );
     return (
       candidates.find((input) => /image|img|file/i.test(input.name || "")) ||
-      candidates.find((input) => /画像なし/i.test(input.value || "")) ||
+      candidates.find((input) =>
+        /\u753b\u50cf\u306a\u3057/i.test(input.value || ""),
+      ) ||
       null
     );
   }
@@ -244,14 +274,14 @@
       <div id="${PANEL_ID}">
         <div class="bullneo-toolbar">
           <div class="bullneo-title">BULLNEO</div>
-          <button type="button" data-bullneo-close="true">閉じる</button>
+          <button type="button" data-bullneo-close="true">\u9589\u3058\u308b</button>
         </div>
         <div class="bullneo-controls">
-          <label>横 <input id="${WIDTH_ID}" type="number" min="100" max="2000" value="400"></label>
-          <label>縦 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="400"></label>
-          <button type="button" data-bullneo-action="rerender">この大きさで開き直す</button>
-          <button type="button" data-bullneo-action="apply">画像に反映</button>
-          <button type="button" data-bullneo-action="clear">クリア</button>
+          <label>\u6a2a <input id="${WIDTH_ID}" type="number" min="100" max="2000" value="400"></label>
+          <label>\u7e26 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="400"></label>
+          <button type="button" data-bullneo-action="rerender">\u3053\u306e\u5927\u304d\u3055\u3067\u958b\u304d\u76f4\u3059</button>
+          <button type="button" data-bullneo-action="apply">\u753b\u50cf\u306b\u53cd\u6620</button>
+          <button type="button" data-bullneo-action="clear">\u30af\u30ea\u30a2</button>
         </div>
         <div id="${STATUS_ID}"></div>
         <div id="${MOUNT_ID}"></div>
@@ -287,7 +317,9 @@
       .addEventListener("click", () => {
         if (!window.Neo || !window.Neo.painter) return;
         window.Neo.painter.clearCanvas();
-        setStatus("キャンバスをクリアしました。");
+        setStatus(
+          "\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u30af\u30ea\u30a2\u3057\u307e\u3057\u305f\u3002",
+        );
       });
 
     document.body.appendChild(modal);
@@ -299,18 +331,54 @@
     const fileInput = findFileInput(form);
     if (!fileInput) return;
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = OPEN_BUTTON_CLASS;
-    button.textContent = "BULLNEO";
-    button.addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.href = "#";
+    link.className = OPEN_BUTTON_CLASS;
+    link.textContent = LINK_TEXT;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
       state.targetForm = form;
       open().catch((error) => {
         setStatus(error.message, true);
       });
     });
 
-    fileInput.insertAdjacentElement("afterend", button);
+    const imageNone = findImageNoneCheckbox(form);
+    if (imageNone && imageNone.parentNode) {
+      imageNone.parentNode.insertAdjacentElement("afterend", link);
+      return;
+    }
+
+    fileInput.insertAdjacentElement("afterend", link);
+  }
+
+  function installLinks(root = document) {
+    const forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter(
+      (form) => findFileInput(form),
+    );
+    forms.forEach((form) => ensureOpenButton(form));
+    if (!state.targetForm) {
+      state.targetForm = findTargetForm();
+    }
+  }
+
+  function observeForms() {
+    if (state.observer) return;
+    state.observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (node.matches?.(FORM_SELECTOR) || node.querySelector?.(FORM_SELECTOR)) {
+            installLinks(node);
+          }
+        }
+      }
+    });
+
+    state.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   function setStatus(message, isError) {
@@ -355,14 +423,16 @@
     }
 
     if (!window.Neo || !window.Neo.init()) {
-      throw new Error("PaintBBS NEO の初期化に失敗しました。");
+      throw new Error(
+        "PaintBBS NEO \u306e\u521d\u671f\u5316\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002",
+      );
     }
 
     window.Neo.start(false);
 
     const submitButton = document.getElementById("neo-submit");
     if (submitButton) {
-      submitButton.textContent = "画像に反映";
+      submitButton.textContent = "\u753b\u50cf\u306b\u53cd\u6620";
       submitButton.onmouseup = () => {
         applyImageToForm().catch((error) => {
           setStatus(error.message, true);
@@ -370,7 +440,9 @@
       };
     }
 
-    setStatus("描き終わったら「画像に反映」で添付ファイル欄へ戻します。");
+    setStatus(
+      "\u63cf\u304d\u7d42\u308f\u3063\u305f\u3089\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u6dfb\u4ed8\u30d5\u30a1\u30a4\u30eb\u6b04\u3078\u623b\u3057\u307e\u3059\u3002",
+    );
     state.mounted = true;
   }
 
@@ -378,10 +450,14 @@
     const form = state.targetForm || findTargetForm();
     const fileInput = findFileInput(form);
     if (!form || !fileInput) {
-      throw new Error("画像を差し込む投稿フォームが見つかりませんでした。");
+      throw new Error(
+        "\u753b\u50cf\u3092\u5dee\u3057\u8fbc\u3080\u6295\u7a3f\u30d5\u30a9\u30fc\u30e0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
+      );
     }
     if (!window.Neo || !window.Neo.painter) {
-      throw new Error("NEO のキャンバスがまだ準備できていません。");
+      throw new Error(
+        "NEO \u306e\u30ad\u30e3\u30f3\u30d0\u30b9\u304c\u307e\u3060\u6e96\u5099\u3067\u304d\u3066\u3044\u307e\u305b\u3093\u3002",
+      );
     }
 
     const blob = window.Neo.painter.getPNG();
@@ -400,14 +476,18 @@
       imageNone.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    setStatus("PNG を添付欄へ反映しました。あとは通常どおり投稿できます。");
+    setStatus(
+      "PNG \u3092\u6dfb\u4ed8\u6b04\u3078\u53cd\u6620\u3057\u307e\u3057\u305f\u3002\u3042\u3068\u306f\u901a\u5e38\u3069\u304a\u308a\u6295\u7a3f\u3067\u304d\u307e\u3059\u3002",
+    );
     close();
   }
 
   async function open() {
     state.targetForm = state.targetForm || findTargetForm();
     if (!state.targetForm) {
-      throw new Error("ふたばの投稿フォームが見つかりませんでした。");
+      throw new Error(
+        "\u3075\u305f\u3070\u306e\u6295\u7a3f\u30d5\u30a9\u30fc\u30e0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
+      );
     }
 
     ensureInlineStyle();
@@ -428,17 +508,16 @@
   }
 
   function boot() {
+    ensureInlineStyle();
     state.targetForm = findTargetForm();
-    if (state.targetForm) {
-      ensureInlineStyle();
-      ensureOpenButton(state.targetForm);
-      open().catch((error) => {
-        setStatus(error.message, true);
-      });
+    installLinks(document);
+    if (document.body) {
+      observeForms();
     }
   }
 
   window.BullNeo = {
+    install: boot,
     open,
     close,
     renderEditor,
