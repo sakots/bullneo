@@ -13,6 +13,7 @@
   const ASSET_MARKER = "data-bullneo-asset";
   const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
   const OE_BUTTON_ID = "oebtnd";
+  const REPLY_TEXTAREA_ID = "ftxa";
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
   const DEBUG = (() => {
@@ -279,6 +280,16 @@ a.${OPEN_BUTTON_CLASS} {
         return container;
       }
     }
+
+    const replyTextarea = doc.getElementById(REPLY_TEXTAREA_ID);
+    if (replyTextarea) {
+      return (
+        replyTextarea.closest("form") ||
+        replyTextarea.closest("table") ||
+        replyTextarea.closest("div") ||
+        replyTextarea.parentElement
+      );
+    }
     return null;
   }
 
@@ -295,7 +306,23 @@ a.${OPEN_BUTTON_CLASS} {
 
   function findFileInput(form) {
     if (!form) return null;
-    const inputs = Array.from(form.querySelectorAll(FILE_INPUT_SELECTOR));
+    let inputs = Array.from(form.querySelectorAll(FILE_INPUT_SELECTOR));
+    if (inputs.length === 0) {
+      const doc = form.ownerDocument || document;
+      const replyTextarea = doc.getElementById(REPLY_TEXTAREA_ID);
+      const replyContainer =
+        replyTextarea &&
+        (replyTextarea.closest("form") ||
+          replyTextarea.closest("table") ||
+          replyTextarea.closest("div") ||
+          replyTextarea.parentElement);
+      if (
+        replyContainer &&
+        (replyContainer === form || replyContainer.contains(form) || form.contains(replyContainer))
+      ) {
+        inputs = Array.from(doc.querySelectorAll(FILE_INPUT_SELECTOR));
+      }
+    }
     return (
       inputs.find((input) =>
         FILE_NAME_CANDIDATES.includes((input.name || "").toLowerCase()),
@@ -478,6 +505,15 @@ a.${OPEN_BUTTON_CLASS} {
         for (const node of mutation.addedNodes) {
           if (!(node instanceof Element)) continue;
           if (node.matches?.(FORM_SELECTOR) || node.querySelector?.(FORM_SELECTOR)) {
+            installLinks(targetDocument);
+          }
+          if (
+            node.id === REPLY_TEXTAREA_ID ||
+            node.querySelector?.("#" + REPLY_TEXTAREA_ID) ||
+            node.matches?.(FILE_INPUT_SELECTOR) ||
+            node.querySelector?.(FILE_INPUT_SELECTOR)
+          ) {
+            state.targetForm = findTargetForm();
             installLinks(targetDocument);
           }
         }
