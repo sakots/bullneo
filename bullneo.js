@@ -14,7 +14,14 @@
   const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
-  const DEBUG = /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(location.search);
+  const DEBUG = (() => {
+    const currentScript = document.currentScript;
+    const scriptSrc = currentScript && currentScript.src ? currentScript.src : "";
+    return (
+      /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(location.search) ||
+      /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(scriptSrc)
+    );
+  })();
 
   const existing = window.BullNeo;
   if (existing && typeof existing.install === "function") {
