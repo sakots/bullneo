@@ -472,6 +472,31 @@ a.${OPEN_BUTTON_CLASS} {
     console.log("[BULLNEO]", message);
   }
 
+  function debugDocumentSummary(doc, index) {
+    if (!DEBUG) return;
+    let href = "";
+    try {
+      href = doc.location ? doc.location.href : "(no location)";
+    } catch (_error) {
+      href = "(location inaccessible)";
+    }
+    const fileInputs = doc.querySelectorAll(FILE_INPUT_SELECTOR).length;
+    const forms = (doc.forms && doc.forms.length) || 0;
+    const textareas = doc.querySelectorAll("textarea").length;
+    debugLog(
+      "doc[" +
+        index +
+        "] href=" +
+        href +
+        " forms=" +
+        forms +
+        " fileInputs=" +
+        fileInputs +
+        " textareas=" +
+        textareas,
+    );
+  }
+
   async function ensureAssets() {
     loadStyleOnce(resolveAsset("neo/dist/neo.css"));
     await loadScriptOnce(resolveAsset("neo/dist/neo.js"));
@@ -598,6 +623,7 @@ a.${OPEN_BUTTON_CLASS} {
     debugLog("frame: " + (window.top === window ? "top" : "child"));
     const docs = getAccessibleDocuments();
     debugLog("documents: " + docs.length);
+    docs.forEach((doc, index) => debugDocumentSummary(doc, index));
     for (const doc of docs) {
       installLinks(doc);
       if (doc.body) {
