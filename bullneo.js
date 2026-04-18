@@ -27,7 +27,7 @@
     targetForm: null,
     neoReady: false,
     mounted: false,
-    observer: null,
+    observers: [],
   };
 
   function detectBaseUrl() {
@@ -200,15 +200,55 @@ a.${OPEN_BUTTON_CLASS} {
     document.head.appendChild(style);
   }
 
-  function findTargetForm() {
-    const activeForm = document.activeElement && document.activeElement.closest
-      ? document.activeElement.closest("form")
+  function getAccessibleDocuments() {
+    const docs = [];
+    const visited = new Set();
+
+    function visit(win) {
+      if (!win || visited.has(win)) return;
+      visited.add(win);
+
+      let doc = null;
+      try {
+        doc = win.document;
+      } catch (_error) {
+        return;
+      }
+      if (!doc) return;
+      docs.push(doc);
+
+      let frames = null;
+      try {
+        frames = win.frames;
+      } catch (_error) {
+        frames = null;
+      }
+      if (!frames) return;
+
+      for (let i = 0; i < frames.length; i += 1) {
+        visit(frames[i]);
+      }
+    }
+
+    try {
+      visit(window.top);
+    } catch (_error) {
+      visit(window);
+    }
+    visit(window);
+
+    return docs;
+  }
+
+  function findTargetFormInDocument(doc) {
+    const activeForm = doc.activeElement && doc.activeElement.closest
+      ? doc.activeElement.closest("form")
       : null;
     if (activeForm && activeForm.querySelector(FILE_INPUT_SELECTOR)) {
       return activeForm;
     }
 
-    const forms = Array.from(document.forms).filter((form) =>
+    const forms = Array.from(doc.forms || []).filter((form) =>
       form.querySelector(FILE_INPUT_SELECTOR),
     );
 
@@ -217,6 +257,15 @@ a.${OPEN_BUTTON_CLASS} {
       forms[0] ||
       null
     );
+  }
+
+  function findTargetForm() {
+    const docs = getAccessibleDocuments();
+    for (const doc of docs) {
+      const form = findTargetFormInDocument(doc);
+      if (form) return form;
+    }
+    return null;
   }
 
   function findFileInput(form) {
@@ -364,23 +413,30 @@ a.${OPEN_BUTTON_CLASS} {
     }
   }
 
-  function observeForms() {
-    if (state.observer) return;
-    state.observer = new MutationObserver((mutations) => {
+  function observeForms(targetDocument) {
+    if (
+      state.observers.some((entry) => entry.targetDocument === targetDocument)
+    ) {
+      return;
+    }
+
+    const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (!(node instanceof Element)) continue;
           if (node.matches?.(FORM_SELECTOR) || node.querySelector?.(FORM_SELECTOR)) {
-            installLinks(node);
+            installLinks(targetDocument);
           }
         }
       }
     });
 
-    state.observer.observe(document.body, {
+    if (!targetDocument.body) return;
+    observer.observe(targetDocument.body, {
       childList: true,
       subtree: true,
     });
+    state.observers.push({ targetDocument, observer });
   }
 
   function setStatus(message, isError) {
@@ -519,9 +575,13 @@ a.${OPEN_BUTTON_CLASS} {
     state.targetForm = findTargetForm();
     debugLog("boot url: " + location.href);
     debugLog("frame: " + (window.top === window ? "top" : "child"));
-    installLinks(document);
-    if (document.body) {
-      observeForms();
+    const docs = getAccessibleDocuments();
+    debugLog("documents: " + docs.length);
+    for (const doc of docs) {
+      installLinks(doc);
+      if (doc.body) {
+        observeForms(doc);
+      }
     }
     if (!state.targetForm) {
       console.warn("[BULLNEO] target form not found on this document");
