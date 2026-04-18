@@ -383,8 +383,8 @@ a.${OPEN_BUTTON_CLASS} {
           <button type="button" data-bullneo-close="true">\u9589\u3058\u308b</button>
         </div>
         <div class="bullneo-controls">
-          <label>\u6a2a <input id="${WIDTH_ID}" type="number" min="100" max="2000" value="400"></label>
-          <label>\u7e26 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="400"></label>
+          <label>\u6a2a <input id="${WIDTH_ID}" type="number" min="100" max="2000" value="344"></label>
+          <label>\u7e26 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="135"></label>
           <button type="button" data-bullneo-action="rerender">\u3053\u306e\u5927\u304d\u3055\u3067\u958b\u304d\u76f4\u3059</button>
           <button type="button" data-bullneo-action="apply">\u753b\u50cf\u306b\u53cd\u6620</button>
           <button type="button" data-bullneo-action="clear">\u30af\u30ea\u30a2</button>
