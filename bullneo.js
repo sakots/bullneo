@@ -12,6 +12,7 @@
   const INLINE_STYLE_ID = "bullneo-inline-style";
   const ASSET_MARKER = "data-bullneo-asset";
   const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
+  const OE_BUTTON_ID = "oebtnd";
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
   const DEBUG = (() => {
@@ -426,7 +427,31 @@ a.${OPEN_BUTTON_CLASS} {
     fileInput.insertAdjacentElement("afterend", link);
   }
 
+  function ensureOpenButtonInOebtnd(doc) {
+    if (!doc || !doc.getElementById) return;
+    const mount = doc.getElementById(OE_BUTTON_ID);
+    if (!mount || mount.querySelector(`.${OPEN_BUTTON_CLASS}`)) return;
+
+    const link = doc.createElement("a");
+    link.href = "#";
+    link.className = OPEN_BUTTON_CLASS;
+    link.textContent = LINK_TEXT;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      state.targetForm = findTargetForm();
+      open().catch((error) => {
+        setStatus(error.message, true);
+      });
+    });
+
+    mount.appendChild(link);
+    debugLog("inserted launcher into #" + OE_BUTTON_ID);
+  }
+
   function installLinks(root = document) {
+    if (root.nodeType === 9) {
+      ensureOpenButtonInOebtnd(root);
+    }
     let forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter((form) =>
       findFileInput(form),
     );
@@ -567,7 +592,7 @@ a.${OPEN_BUTTON_CLASS} {
     const fileInput = findFileInput(form);
     if (!form || !fileInput) {
       throw new Error(
-        "\u753b\u50cf\u3092\u5dee\u3057\u8fbc\u3080\u6295\u7a3f\u30d5\u30a9\u30fc\u30e0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
+        "\u753b\u50cf\u3092\u5dee\u3057\u8fbc\u3080\u6295\u7a3f\u30d5\u30a9\u30fc\u30e0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002\u8fd4\u4fe1\u6b04\u3092\u958b\u3044\u305f\u72b6\u614b\u3067\u8a66\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
       );
     }
     if (!window.Neo || !window.Neo.painter) {
@@ -599,17 +624,18 @@ a.${OPEN_BUTTON_CLASS} {
   }
 
   async function open() {
-    state.targetForm = state.targetForm || findTargetForm();
-    if (!state.targetForm) {
-      throw new Error(
-        "\u3075\u305f\u3070\u306e\u6295\u7a3f\u30d5\u30a9\u30fc\u30e0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
-      );
-    }
-
     ensureInlineStyle();
-    ensureOpenButton(state.targetForm);
     const modal = ensureModal();
     modal.classList.add("is-open");
+    state.targetForm = findTargetForm();
+    if (state.targetForm) {
+      ensureOpenButton(state.targetForm);
+    } else {
+      setStatus(
+        "\u307e\u3060\u6dfb\u4ed8\u6b04\u306f\u898b\u3064\u304b\u3063\u3066\u3044\u307e\u305b\u3093\u3002\u63cf\u753b\u306f\u3067\u304d\u307e\u3059\u304c\u3001\u53cd\u6620\u524d\u306b\u8fd4\u4fe1\u6b04\u3092\u958b\u3044\u3066\u304f\u3060\u3055\u3044\u3002",
+        false,
+      );
+    }
 
     if (!state.mounted) {
       await renderEditor();
@@ -637,7 +663,10 @@ a.${OPEN_BUTTON_CLASS} {
         observeForms(doc);
       }
     }
-    if (!state.targetForm) {
+    const hasOebtnd = docs.some(
+      (doc) => doc.getElementById && doc.getElementById(OE_BUTTON_ID),
+    );
+    if (!state.targetForm && !hasOebtnd) {
       console.warn("[BULLNEO] target form not found on this document");
       if (DEBUG) {
         alert(
