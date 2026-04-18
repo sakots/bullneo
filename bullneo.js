@@ -133,7 +133,8 @@
 }
 
 #${PANEL_ID} {
-  width: min(92vw, 960px);
+  width: fit-content;
+  max-width: 92vw;
   max-height: 92vh;
   overflow: auto;
   box-sizing: border-box;
@@ -200,7 +201,7 @@
 }
 
 #${MOUNT_ID} {
-  min-height: 520px;
+  min-height: 0;
 }
 
 a.${OPEN_BUTTON_CLASS} {
@@ -599,8 +600,17 @@ a.${OPEN_BUTTON_CLASS} {
   async function renderEditor() {
     await ensureAssets();
     const modal = ensureModal();
+    const panel = document.getElementById(PANEL_ID);
     const mount = modal.querySelector(`#${MOUNT_ID}`);
     const { width, height } = getRequestedCanvasSize();
+    const appletWidth = Math.max(width + 140, 520);
+    const appletHeight = Math.max(height + 170, 540);
+
+    if (panel) {
+      panel.style.width = Math.min(appletWidth + 32, window.innerWidth * 0.92) + "px";
+    }
+    mount.style.width = appletWidth + "px";
+    mount.style.minHeight = appletHeight + "px";
 
     mount.innerHTML = buildAppletMarkup(width, height);
 
