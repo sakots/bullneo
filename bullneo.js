@@ -14,6 +14,7 @@
   const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
   const FORM_SELECTOR = "form";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
+  const DEBUG = /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(location.search);
 
   const existing = window.BullNeo;
   if (existing && typeof existing.install === "function") {
@@ -356,6 +357,7 @@ a.${OPEN_BUTTON_CLASS} {
     const forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter(
       (form) => findFileInput(form),
     );
+    debugLog("forms with file input: " + forms.length);
     forms.forEach((form) => ensureOpenButton(form));
     if (!state.targetForm) {
       state.targetForm = findTargetForm();
@@ -386,6 +388,11 @@ a.${OPEN_BUTTON_CLASS} {
     if (!status) return;
     status.textContent = message || "";
     status.style.color = isError ? "#a12727" : "#5e4a2f";
+  }
+
+  function debugLog(message) {
+    if (!DEBUG) return;
+    console.log("[BULLNEO]", message);
   }
 
   async function ensureAssets() {
@@ -510,9 +517,24 @@ a.${OPEN_BUTTON_CLASS} {
   function boot() {
     ensureInlineStyle();
     state.targetForm = findTargetForm();
+    debugLog("boot url: " + location.href);
+    debugLog("frame: " + (window.top === window ? "top" : "child"));
     installLinks(document);
     if (document.body) {
       observeForms();
+    }
+    if (!state.targetForm) {
+      console.warn("[BULLNEO] target form not found on this document");
+      if (DEBUG) {
+        alert(
+          "BULLNEO: target form not found\nurl=" +
+            location.href +
+            "\nframe=" +
+            (window.top === window ? "top" : "child"),
+        );
+      }
+    } else {
+      debugLog("target form detected");
     }
   }
 
