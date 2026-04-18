@@ -12,7 +12,7 @@
   const INLINE_STYLE_ID = "bullneo-inline-style";
   const ASSET_MARKER = "data-bullneo-asset";
   const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
-  const FORM_SELECTOR = "form";
+  const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
   const DEBUG = /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(location.search);
 
@@ -259,11 +259,28 @@ a.${OPEN_BUTTON_CLASS} {
     );
   }
 
+  function findPseudoFormInDocument(doc) {
+    const fileInputs = Array.from(doc.querySelectorAll(FILE_INPUT_SELECTOR));
+    for (const input of fileInputs) {
+      const container =
+        input.closest("form") ||
+        input.closest("table") ||
+        input.closest("div") ||
+        input.parentElement;
+      if (container) {
+        return container;
+      }
+    }
+    return null;
+  }
+
   function findTargetForm() {
     const docs = getAccessibleDocuments();
     for (const doc of docs) {
       const form = findTargetFormInDocument(doc);
       if (form) return form;
+      const pseudoForm = findPseudoFormInDocument(doc);
+      if (pseudoForm) return pseudoForm;
     }
     return null;
   }
@@ -403,9 +420,13 @@ a.${OPEN_BUTTON_CLASS} {
   }
 
   function installLinks(root = document) {
-    const forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter(
-      (form) => findFileInput(form),
+    let forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter((form) =>
+      findFileInput(form),
     );
+    if (forms.length === 0 && root.nodeType === 9) {
+      const pseudoForm = findPseudoFormInDocument(root);
+      if (pseudoForm) forms = [pseudoForm];
+    }
     debugLog("forms with file input: " + forms.length);
     forms.forEach((form) => ensureOpenButton(form));
     if (!state.targetForm) {
