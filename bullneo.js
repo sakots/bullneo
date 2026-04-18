@@ -8,6 +8,7 @@
   const STATUS_ID = "bullneo-status";
   const WIDTH_ID = "bullneo-width";
   const HEIGHT_ID = "bullneo-height";
+  const RESET_SIZE_ID = "bullneo-reset-size";
   const OPEN_BUTTON_CLASS = "bullneo-open";
   const INLINE_STYLE_ID = "bullneo-inline-style";
   const ASSET_MARKER = "data-bullneo-asset";
@@ -386,6 +387,7 @@ a.${OPEN_BUTTON_CLASS} {
         <div class="bullneo-controls">
           <label>\u6a2a <input id="${WIDTH_ID}" type="number" min="100" max="2000" value="344"></label>
           <label>\u7e26 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="135"></label>
+          <a href="#" id="${RESET_SIZE_ID}">344x135\u306b\u30ea\u30bb\u30c3\u30c8</a>
           <button type="button" data-bullneo-action="rerender">\u3053\u306e\u5927\u304d\u3055\u3067\u958b\u304d\u76f4\u3059</button>
           <button type="button" data-bullneo-action="apply">\u753b\u50cf\u306b\u53cd\u6620</button>
           <button type="button" data-bullneo-action="clear">\u30af\u30ea\u30a2</button>
@@ -410,6 +412,17 @@ a.${OPEN_BUTTON_CLASS} {
           setStatus(error.message, true);
         });
       });
+
+    modal.querySelector(`#${RESET_SIZE_ID}`).addEventListener("click", (event) => {
+      event.preventDefault();
+      const widthInput = getWidthInput();
+      const heightInput = getHeightInput();
+      if (widthInput) widthInput.value = "344";
+      if (heightInput) heightInput.value = "135";
+      renderEditor().catch((error) => {
+        setStatus(error.message, true);
+      });
+    });
 
     modal
       .querySelector('[data-bullneo-action="apply"]')
