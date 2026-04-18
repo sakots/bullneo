@@ -13,6 +13,10 @@
   const ASSET_MARKER = "data-bullneo-asset";
   const LINK_TEXT = "\u624b\u66f8\u304d(NEO)";
   const OE_BUTTON_ID = "oebtnd";
+  const START_LINK_ID = "bullneo-start-link";
+  const THUMBNAIL_ID = "bullneo-thumbnail";
+  const IMAGE_DATA_URL_ID = "baseform";
+  const OEJS_ID = "oejs";
   const REPLY_TEXTAREA_ID = "ftxa";
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
@@ -409,7 +413,7 @@ a.${OPEN_BUTTON_CLASS} {
     modal
       .querySelector('[data-bullneo-action="apply"]')
       .addEventListener("click", () => {
-        applyImageToForm().catch((error) => {
+        applyImageToFutaba().catch((error) => {
           setStatus(error.message, true);
         });
       });
@@ -457,10 +461,15 @@ a.${OPEN_BUTTON_CLASS} {
   function ensureOpenButtonInOebtnd(doc) {
     if (!doc || !doc.getElementById) return;
     const mount = doc.getElementById(OE_BUTTON_ID);
-    if (!mount || mount.querySelector(`.${OPEN_BUTTON_CLASS}`)) return;
+    if (!mount || doc.getElementById(START_LINK_ID)) return;
 
+    const wrapper = mount.parentNode.insertBefore(
+      doc.createElement("div"),
+      mount.nextSibling,
+    );
     const link = doc.createElement("a");
     link.href = "#";
+    link.id = START_LINK_ID;
     link.className = OPEN_BUTTON_CLASS;
     link.textContent = LINK_TEXT;
     link.addEventListener("click", (event) => {
@@ -471,7 +480,8 @@ a.${OPEN_BUTTON_CLASS} {
       });
     });
 
-    mount.appendChild(link);
+    link.style.fontSize = "x-small";
+    wrapper.appendChild(link);
     debugLog("inserted launcher into #" + OE_BUTTON_ID);
   }
 
@@ -611,50 +621,71 @@ a.${OPEN_BUTTON_CLASS} {
     if (submitButton) {
       submitButton.textContent = "\u753b\u50cf\u306b\u53cd\u6620";
       submitButton.onmouseup = () => {
-        applyImageToForm().catch((error) => {
+        applyImageToFutaba().catch((error) => {
           setStatus(error.message, true);
         });
       };
     }
 
     setStatus(
-      "\u63cf\u304d\u7d42\u308f\u3063\u305f\u3089\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u6dfb\u4ed8\u30d5\u30a1\u30a4\u30eb\u6b04\u3078\u623b\u3057\u307e\u3059\u3002",
+      "\u63cf\u304d\u7d42\u308f\u3063\u305f\u3089\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u3075\u305f\u3070\u306e\u624b\u66f8\u304djs\u9818\u57df\u3078\u623b\u3057\u307e\u3059\u3002",
     );
     state.mounted = true;
   }
 
-  async function applyImageToForm() {
-    const form = state.targetForm || findTargetForm();
-    const fileInput = findFileInput(form);
-    if (!form || !fileInput) {
-      throw new Error(
-        "\u753b\u50cf\u3092\u5dee\u3057\u8fbc\u3080\u6295\u7a3f\u30d5\u30a9\u30fc\u30e0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002\u8fd4\u4fe1\u6b04\u3092\u958b\u3044\u305f\u72b6\u614b\u3067\u8a66\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
-      );
+  function updateThumbnail(dataURL) {
+    const anchor = document.getElementById(START_LINK_ID);
+    if (!anchor) return;
+    let thumb = document.getElementById(THUMBNAIL_ID);
+    if (!thumb) {
+      const div = anchor.appendChild(document.createElement("div"));
+      thumb = div.appendChild(document.createElement("img"));
+      thumb.id = THUMBNAIL_ID;
+      thumb.style.width = "100%";
     }
+    thumb.src = dataURL;
+  }
+
+  function clearFutabaTargets() {
+    const baseform = document.getElementById(IMAGE_DATA_URL_ID);
+    if (baseform) {
+      baseform.removeAttribute("value");
+    }
+
+    const thumb = document.getElementById(THUMBNAIL_ID);
+    if (thumb && thumb.parentNode && thumb.parentNode.parentNode) {
+      thumb.parentNode.parentNode.removeChild(thumb.parentNode);
+    }
+  }
+
+  async function applyImageToFutaba() {
     if (!window.Neo || !window.Neo.painter) {
       throw new Error(
         "NEO \u306e\u30ad\u30e3\u30f3\u30d0\u30b9\u304c\u307e\u3060\u6e96\u5099\u3067\u304d\u3066\u3044\u307e\u305b\u3093\u3002",
       );
     }
 
-    const blob = window.Neo.painter.getPNG();
-    const file = new File([blob], `bullneo-${Date.now()}.png`, {
-      type: "image/png",
-    });
+    const canvas = window.Neo.painter.getImage();
+    const dataURL = canvas.toDataURL("image/png");
 
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    fileInput.files = transfer.files;
-    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-
-    const imageNone = findImageNoneCheckbox(form);
-    if (imageNone && imageNone.checked) {
-      imageNone.checked = false;
-      imageNone.dispatchEvent(new Event("change", { bubbles: true }));
+    const baseform = document.getElementById(IMAGE_DATA_URL_ID);
+    if (baseform) {
+      baseform.setAttribute("value", dataURL.replace(/^[^,]+,/, ""));
     }
 
+    const oejs = document.getElementById(OEJS_ID);
+    if (oejs && oejs.getContext) {
+      const image = canvas
+        .getContext("2d", { willReadFrequently: true })
+        .getImageData(0, 0, canvas.width, canvas.height);
+      oejs.width = canvas.width;
+      oejs.height = canvas.height;
+      oejs.getContext("2d").putImageData(image, 0, 0);
+    }
+
+    updateThumbnail(dataURL);
     setStatus(
-      "PNG \u3092\u6dfb\u4ed8\u6b04\u3078\u53cd\u6620\u3057\u307e\u3057\u305f\u3002\u3042\u3068\u306f\u901a\u5e38\u3069\u304a\u308a\u6295\u7a3f\u3067\u304d\u307e\u3059\u3002",
+      "\u753b\u50cf\u3092\u3075\u305f\u3070\u306e\u624b\u66f8\u304djs\u5411\u3051\u30d5\u30a3\u30fc\u30eb\u30c9\u306b\u53cd\u6620\u3057\u307e\u3057\u305f\u3002",
     );
     close();
   }
@@ -668,7 +699,7 @@ a.${OPEN_BUTTON_CLASS} {
       ensureOpenButton(state.targetForm);
     } else {
       setStatus(
-        "\u307e\u3060\u6dfb\u4ed8\u6b04\u306f\u898b\u3064\u304b\u3063\u3066\u3044\u307e\u305b\u3093\u3002\u63cf\u753b\u306f\u3067\u304d\u307e\u3059\u304c\u3001\u53cd\u6620\u524d\u306b\u8fd4\u4fe1\u6b04\u3092\u958b\u3044\u3066\u304f\u3060\u3055\u3044\u3002",
+        "\u8fd4\u4fe1\u6b04\u304c\u898b\u3064\u304b\u3089\u306a\u304f\u3066\u3082\u63cf\u753b\u306f\u3067\u304d\u307e\u3059\u3002\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u624b\u66f8\u304djs\u9818\u57df\u3078\u623b\u3057\u307e\u3059\u3002",
         false,
       );
     }
@@ -722,7 +753,8 @@ a.${OPEN_BUTTON_CLASS} {
     open,
     close,
     renderEditor,
-    applyImageToForm,
+    applyImageToFutaba,
+    clearFutabaTargets,
   };
 
   boot();
