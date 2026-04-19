@@ -9,6 +9,8 @@
   const WIDTH_ID = "bullneo-width";
   const HEIGHT_ID = "bullneo-height";
   const RESET_SIZE_ID = "bullneo-reset-size";
+  const PALETTE_SELECT_ID = "bullneo-palette-select";
+  const PALETTE_RELOAD_ID = "bullneo-palette-reload";
   const OPEN_BUTTON_CLASS = "bullneo-open";
   const INLINE_STYLE_ID = "bullneo-inline-style";
   const ASSET_MARKER = "data-bullneo-asset";
@@ -42,6 +44,9 @@
     neoReady: false,
     mounted: false,
     observers: [],
+    paletteUrl: detectPaletteUrl(),
+    palettes: [],
+    paletteLoaded: false,
   };
 
   function detectBaseUrl() {
@@ -59,6 +64,25 @@
 
   function resolveAsset(path) {
     return new URL(path, state.baseUrl).href;
+  }
+
+  function getScriptParam(name) {
+    const currentScript = document.currentScript;
+    const scriptSrc = currentScript && currentScript.src ? currentScript.src : "";
+    if (!scriptSrc) return "";
+    try {
+      return new URL(scriptSrc).searchParams.get(name) || "";
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function detectPaletteUrl() {
+    const configured =
+      window.BULLNEO_PALETTE_URL ||
+      getScriptParam("bullneo_palette") ||
+      "";
+    return configured ? new URL(configured, detectBaseUrl()).href : "";
   }
 
   function loadScriptOnce(src) {
@@ -165,6 +189,18 @@
   margin-bottom: 12px;
 }
 
+#${PANEL_ID} .bullneo-palette-controls {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+#${PANEL_ID} .bullneo-palette-controls.is-ready {
+  display: flex;
+}
+
 #${PANEL_ID} .bullneo-title {
   font-weight: 700;
   font-size: 16px;
@@ -178,6 +214,11 @@
 
 #${PANEL_ID} input[type="number"] {
   width: 90px;
+}
+
+#${PANEL_ID} select {
+  max-width: 240px;
+  font: inherit;
 }
 
 #${PANEL_ID} button {
@@ -372,6 +413,137 @@ a.${OPEN_BUTTON_CLASS} {
     return Math.max(min, Math.min(max, num));
   }
 
+  function parsePaletteText(text) {
+    const lines = String(text || "")
+      .replace(/\r\n?/g, "\n")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("//"));
+    const palettes = [];
+    let currentName = "";
+    let currentColors = [];
+
+    function pushPalette() {
+      if (!currentColors.length) return;
+      const colors = currentColors.filter((line) =>
+        /^#[0-9a-fA-F]{6}$/.test(line),
+      );
+      if (colors.length >= 14) {
+        palettes.push({
+          name: currentName || "\u30d1\u30ec\u30c3\u30c8 " + (palettes.length + 1),
+          colors: colors.slice(0, 14),
+        });
+      }
+    }
+
+    for (const line of lines) {
+      if (line.startsWith("!")) {
+        pushPalette();
+        currentName = line.slice(1).trim();
+        currentColors = [];
+        if (/^matrix$/i.test(currentName)) {
+          currentName = "";
+        }
+        continue;
+      }
+      if (/^#[0-9a-fA-F]{6}$/.test(line)) {
+        currentColors.push(line);
+      }
+    }
+    pushPalette();
+
+    if (!palettes.length) {
+      const colors = lines.filter((line) => /^#[0-9a-fA-F]{6}$/.test(line));
+      if (colors.length >= 14) {
+        palettes.push({
+          name: "\u30d1\u30ec\u30c3\u30c8",
+          colors: colors.slice(0, 14),
+        });
+      }
+    }
+
+    return palettes;
+  }
+
+  async function loadPalettes(options = {}) {
+    if (!state.paletteUrl) return [];
+    if (state.paletteLoaded && !options.force) return state.palettes;
+
+    const response = await fetch(state.paletteUrl, { cache: "no-cache" });
+    if (!response.ok) {
+      throw new Error(
+        "\u30d1\u30ec\u30c3\u30c8\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002HTTP " +
+          response.status,
+      );
+    }
+
+    const palettes = parsePaletteText(await response.text());
+    if (!palettes.length) {
+      throw new Error(
+        "\u6709\u52b9\u306a14\u8272\u30d1\u30ec\u30c3\u30c8\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
+      );
+    }
+
+    state.palettes = palettes;
+    state.paletteLoaded = true;
+    updatePaletteSelect();
+    return palettes;
+  }
+
+  function getPaletteSelect() {
+    return document.getElementById(PALETTE_SELECT_ID);
+  }
+
+  function updatePaletteSelect() {
+    const select = getPaletteSelect();
+    const controls = document.querySelector(
+      '[data-bullneo-palette-controls="true"]',
+    );
+    if (!select || !controls) return;
+
+    select.textContent = "";
+    state.palettes.forEach((palette, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = palette.name;
+      const swatch = palette.colors[4] || palette.colors[0];
+      option.style.background = swatch;
+      option.style.color = getReadableTextColor(swatch);
+      select.appendChild(option);
+    });
+
+    controls.classList.toggle(
+      "is-ready",
+      Boolean(state.paletteUrl && state.palettes.length),
+    );
+  }
+
+  function getReadableTextColor(color) {
+    const match = /^#?([0-9a-fA-F]{6})$/.exec(color || "");
+    if (!match) return "#000000";
+    const hex = match[1];
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return Math.max(r, g, b) < 128 ? "#ffffff" : "#000000";
+  }
+
+  async function applySelectedPalette() {
+    if (!window.Neo || typeof window.Neo.setColors !== "function") return;
+    const select = getPaletteSelect();
+    if (!select || select.selectedIndex < 0) return;
+
+    const palette = state.palettes[Number(select.value)];
+    if (!palette) return;
+
+    window.Neo.setColors(palette.colors.join("\n"));
+    setStatus(
+      "\u30d1\u30ec\u30c3\u30c8\u300c" +
+        palette.name +
+        "\u300d\u3092\u9069\u7528\u3057\u307e\u3057\u305f\u3002",
+    );
+  }
+
   function ensureModal() {
     let modal = document.getElementById(MODAL_ID);
     if (modal) return modal;
@@ -391,6 +563,10 @@ a.${OPEN_BUTTON_CLASS} {
           <button type="button" data-bullneo-action="rerender">\u3053\u306e\u5927\u304d\u3055\u3067\u958b\u304d\u76f4\u3059</button>
           <button type="button" data-bullneo-action="apply">\u753b\u50cf\u306b\u53cd\u6620</button>
           <button type="button" data-bullneo-action="clear">\u30af\u30ea\u30a2</button>
+        </div>
+        <div class="bullneo-palette-controls" data-bullneo-palette-controls="true">
+          <label>\u30d1\u30ec\u30c3\u30c8 <select id="${PALETTE_SELECT_ID}"></select></label>
+          <button type="button" id="${PALETTE_RELOAD_ID}">\u518d\u8aad\u307f\u8fbc\u307f</button>
         </div>
         <div id="${STATUS_ID}"></div>
         <div id="${MOUNT_ID}"></div>
@@ -441,6 +617,21 @@ a.${OPEN_BUTTON_CLASS} {
           "\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u30af\u30ea\u30a2\u3057\u307e\u3057\u305f\u3002",
         );
       });
+
+    const paletteSelect = modal.querySelector(`#${PALETTE_SELECT_ID}`);
+    paletteSelect.addEventListener("change", () => {
+      applySelectedPalette().catch((error) => {
+        setStatus(error.message, true);
+      });
+    });
+
+    modal.querySelector(`#${PALETTE_RELOAD_ID}`).addEventListener("click", () => {
+      loadPalettes({ force: true })
+        .then(() => applySelectedPalette())
+        .catch((error) => {
+          setStatus(error.message, true);
+        });
+    });
 
     document.body.appendChild(modal);
     return modal;
@@ -650,8 +841,20 @@ a.${OPEN_BUTTON_CLASS} {
       };
     }
 
+    let paletteError = "";
+    if (state.paletteUrl) {
+      try {
+        await loadPalettes();
+        await applySelectedPalette();
+      } catch (error) {
+        paletteError = error.message;
+      }
+    }
+
     setStatus(
-      "\u63cf\u304d\u7d42\u308f\u3063\u305f\u3089\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u3075\u305f\u3070\u306e\u624b\u66f8\u304djs\u9818\u57df\u3078\u623b\u3057\u307e\u3059\u3002",
+      paletteError ||
+        "\u63cf\u304d\u7d42\u308f\u3063\u305f\u3089\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u3075\u305f\u3070\u306e\u624b\u66f8\u304djs\u9818\u57df\u3078\u623b\u3057\u307e\u3059\u3002",
+      Boolean(paletteError),
     );
     state.mounted = true;
   }
@@ -778,6 +981,8 @@ a.${OPEN_BUTTON_CLASS} {
     renderEditor,
     applyImageToFutaba,
     clearFutabaTargets,
+    loadPalettes,
+    applySelectedPalette,
   };
 
   boot();

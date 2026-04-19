@@ -34,6 +34,37 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 `https://jun.2chan.net/oe/futaba.htm` のようにフォームが後から差し替わる板でも、添付欄つきフォームを監視して `手書き(NEO)` を再設置します。
 
+## 外部パレット
+
+外部テキストのパレットマトリクスを読み込む場合は、ブックマークレットの `bullneo.js` の URL に `bullneo_palette` を追加してください。
+
+```javascript
+javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_palette=palette.txt&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
+```
+
+`palette.txt` は `bullneo.js` からの相対パス、または絶対 URL を指定できます。別ドメインに置く場合は CORS で取得できる必要があります。
+
+パレットテキストは次の形式です。1パレットにつき14色を指定してください。
+
+```text
+!Palette
+#000000
+#ffffff
+#b47575
+#888888
+#fa9696
+#c096c0
+#ffb6ff
+#8080ff
+#25c7c9
+#e7e58d
+#e7962d
+#99cb7b
+#fcece2
+#f9ddcf
+!Matrix
+```
+
 ## 更新履歴
 
 ### 2026/04/08
