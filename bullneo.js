@@ -81,8 +81,8 @@
     const configured =
       window.BULLNEO_PALETTE_URL ||
       getScriptParam("bullneo_palette") ||
-      "";
-    return configured ? new URL(configured, detectBaseUrl()).href : "";
+      "defaultPalette.txt";
+    return new URL(configured, detectBaseUrl()).href;
   }
 
   function loadScriptOnce(src) {

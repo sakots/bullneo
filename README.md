@@ -36,7 +36,7 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 外部パレット
 
-外部テキストのパレットマトリクスを読み込む場合は、ブックマークレットの `bullneo.js` の URL に `bullneo_palette` を追加してください。
+外部テキストのパレットマトリクスを読み込む場合は、ブックマークレットの `bullneo.js` の URL に `bullneo_palette` を追加してください。省略した場合は、`bullneo.js` と同じ場所にある `defaultPalette.txt` を読み込みます。
 
 ```javascript
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_palette=palette.txt&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
