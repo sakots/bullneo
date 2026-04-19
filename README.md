@@ -42,7 +42,9 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_palette=palette.txt&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
 ```
 
-`palette.txt` は `bullneo.js` からの相対パス、または絶対 URL を指定できます。独自パレットを外部テキストとして読む場合は、配信元が CORS で取得を許可している必要があります。
+`palette.txt` は `bullneo.js` からの相対パス、または絶対 URL を指定できます。
+独自パレットを外部テキストとして読む場合は、配信元が CORS で取得を許可している必要があります。
+（ふたばでは使えません）
 
 パレットテキストは次の形式です。1パレットにつき14色を指定してください。
 
