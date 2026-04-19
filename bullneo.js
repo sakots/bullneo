@@ -23,6 +23,23 @@
   const REPLY_TEXTAREA_ID = "ftxa";
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
+  const DEFAULT_PALETTE_PATH = "defaultPalette.txt";
+  const DEFAULT_PALETTE_TEXT = `!Palette
+#000000
+#ffffff
+#800000
+#aa5a56
+#cf9c97
+#e9c2ba
+#f0e0d6
+#ffffee
+#eeaa88
+#e7e58d
+#789922
+#25c7c9
+#fcece2
+#f9ddcf
+!Matrix`;
   const DEBUG = (() => {
     const currentScript = document.currentScript;
     const scriptSrc = currentScript && currentScript.src ? currentScript.src : "";
@@ -81,7 +98,7 @@
     const configured =
       window.BULLNEO_PALETTE_URL ||
       getScriptParam("bullneo_palette") ||
-      "defaultPalette.txt";
+      DEFAULT_PALETTE_PATH;
     return new URL(configured, detectBaseUrl()).href;
   }
 
@@ -469,15 +486,20 @@ a.${OPEN_BUTTON_CLASS} {
     if (!state.paletteUrl) return [];
     if (state.paletteLoaded && !options.force) return state.palettes;
 
-    const response = await fetch(state.paletteUrl, { cache: "no-cache" });
-    if (!response.ok) {
-      throw new Error(
-        "\u30d1\u30ec\u30c3\u30c8\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002HTTP " +
-          response.status,
-      );
+    const defaultPaletteUrl = new URL(DEFAULT_PALETTE_PATH, state.baseUrl).href;
+    let text = DEFAULT_PALETTE_TEXT;
+    if (state.paletteUrl !== defaultPaletteUrl) {
+      const response = await fetch(state.paletteUrl, { cache: "no-cache" });
+      if (!response.ok) {
+        throw new Error(
+          "\u30d1\u30ec\u30c3\u30c8\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002HTTP " +
+            response.status,
+        );
+      }
+      text = await response.text();
     }
 
-    const palettes = parsePaletteText(await response.text());
+    const palettes = parsePaletteText(text);
     if (!palettes.length) {
       throw new Error(
         "\u6709\u52b9\u306a14\u8272\u30d1\u30ec\u30c3\u30c8\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
