@@ -1,0 +1,16 @@
+!Palette
+#000000
+#ffffff
+#800000
+#aa5a56
+#cf9c97
+#e9c2ba
+#f0e0d6
+#ffffee
+#eeaa88
+#e7e58d
+#789922
+#25c7c9
+#fcece2
+#f9ddcf
+!Matrix
