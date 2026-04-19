@@ -67,6 +67,10 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 更新履歴
 
-### 2026/04/08
+### 2026/06/19
+
+- パレットの指定をできるようにした
+
+### 2026/04/18
 
 - 生やした
