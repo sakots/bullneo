@@ -820,6 +820,7 @@ a.${OPEN_BUTTON_CLASS} {
         <param name="neo_disable_grid_touch_move" value="true">
         <param name="neo_enable_zoom_out" value="true">
         <param name="neo_confirm_unload" value="true">
+        <param name="neo_disable_stabilizer" value="true">
       </applet-dummy>
     `;
   }
