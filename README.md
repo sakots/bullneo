@@ -69,8 +69,9 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 更新履歴
 
-### 2026/04/21
+### 2026/04/21 v0.1.0
 
+- バージョン番号をかけるようにした
 - キャンバスの背景色を手書きのに寄せた
 - 描画処理の改善
   - `neo_disable_stabilizer=true`を追加し手振れ補正を無効化した
