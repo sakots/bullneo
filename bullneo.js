@@ -2,6 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
+  const BULLNEO_VERSION = "0.1.0";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -575,7 +576,7 @@ a.${OPEN_BUTTON_CLASS} {
     modal.innerHTML = `
       <div id="${PANEL_ID}">
         <div class="bullneo-toolbar">
-          <div class="bullneo-title">BULLNEO</div>
+          <div class="bullneo-title">BULLNEO v${BULLNEO_VERSION}</div>
           <button type="button" data-bullneo-close="true">\u9589\u3058\u308b</button>
         </div>
         <div class="bullneo-controls">
@@ -1000,6 +1001,7 @@ a.${OPEN_BUTTON_CLASS} {
 
   window.BullNeo = {
     install: boot,
+    version: BULLNEO_VERSION,
     open,
     close,
     renderEditor,
