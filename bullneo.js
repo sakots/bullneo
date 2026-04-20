@@ -25,6 +25,7 @@
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
   const DEFAULT_PALETTE_PATH = "defaultPalette.txt";
+  const CANVAS_BACKGROUND_COLOR = "#f0e0d6";
   const DEFAULT_PALETTE_TEXT = `!Palette
 #000000
 #ffffff
@@ -806,7 +807,131 @@ a.${OPEN_BUTTON_CLASS} {
   async function ensureAssets() {
     loadStyleOnce(resolveAsset("neo/dist/neo.css"));
     await loadScriptOnce(resolveAsset("neo/dist/neo.js"));
+    applyCanvasBackgroundPatch();
     state.neoReady = true;
+  }
+
+  function applyCanvasBackgroundPatch() {
+    if (
+      !window.Neo ||
+      !window.Neo.Painter ||
+      window.Neo.Painter.prototype.__bullneoBackgroundPatched
+    ) {
+      return;
+    }
+
+    const proto = window.Neo.Painter.prototype;
+    proto.backgroundColor = CANVAS_BACKGROUND_COLOR;
+    proto.__bullneoBackgroundPatched = true;
+
+    proto.getImage = function (imageWidth, imageHeight) {
+      const width = this.canvasWidth;
+      const height = this.canvasHeight;
+      imageWidth = imageWidth || width;
+      imageHeight = imageHeight || height;
+
+      const pngCanvas = document.createElement("canvas");
+      pngCanvas.width = imageWidth;
+      pngCanvas.height = imageHeight;
+      const pngCanvasCtx = pngCanvas.getContext("2d", {
+        willReadFrequently: true,
+      });
+      pngCanvasCtx.fillStyle = this.backgroundColor || CANVAS_BACKGROUND_COLOR;
+      pngCanvasCtx.fillRect(0, 0, imageWidth, imageHeight);
+
+      if (this.visible[0]) {
+        pngCanvasCtx.drawImage(
+          this.canvas[0],
+          0,
+          0,
+          width,
+          height,
+          0,
+          0,
+          imageWidth,
+          imageHeight,
+        );
+      }
+      if (this.visible[1]) {
+        pngCanvasCtx.drawImage(
+          this.canvas[1],
+          0,
+          0,
+          width,
+          height,
+          0,
+          0,
+          imageWidth,
+          imageHeight,
+        );
+      }
+      return pngCanvas;
+    };
+
+    proto.updateDestCanvas = function (x, y, width, height, useTemp) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+
+      const canvasWidth = this.canvasWidth;
+      const canvasHeight = this.canvasHeight;
+      const updateAll =
+        x === 0 && y === 0 && width === canvasWidth && height === canvasHeight;
+      if (x + width > canvasWidth) width = canvasWidth - x;
+      if (y + height > canvasHeight) height = canvasHeight - y;
+      if (x < 0) x = 0;
+      if (y < 0) y = 0;
+      if (width <= 0 || height <= 0) return;
+
+      const ctx = this.destCanvasCtx;
+      ctx.save();
+      ctx.fillStyle = this.backgroundColor || CANVAS_BACKGROUND_COLOR;
+      ctx.globalAlpha = 1.0;
+
+      const zoom = this.zoom;
+      this.scrollBarX = isNaN(this.scrollBarX) ? 0 : this.scrollBarX;
+      this.scrollBarY = isNaN(this.scrollBarY) ? 0 : this.scrollBarY;
+      const offsetX =
+        this.scrollBarX * (this.canvasWidth * zoom - this.destCanvas.width);
+      const offsetY =
+        this.scrollBarY * (this.canvasHeight * zoom - this.destCanvas.height);
+
+      const zx = Math.round(x * zoom - offsetX);
+      const zy = Math.round(y * zoom - offsetY);
+      const zx2 = Math.round((x + width) * zoom - offsetX);
+      const zy2 = Math.round((y + height) * zoom - offsetY);
+      const zw = zx2 - zx;
+      const zh = zy2 - zy;
+
+      if (updateAll) {
+        ctx.fillRect(0, 0, this.destCanvas.width, this.destCanvas.height);
+      } else {
+        ctx.fillRect(zx, zy, zw, zh);
+      }
+
+      if (this.visible[0]) {
+        ctx.drawImage(this.canvas[0], x, y, width, height, zx, zy, zw, zh);
+      }
+      if (this.visible[1]) {
+        ctx.drawImage(this.canvas[1], x, y, width, height, zx, zy, zw, zh);
+      }
+
+      if (useTemp) {
+        const tempX = Math.floor(this.tempX * zoom);
+        const tempY = Math.floor(this.tempY * zoom);
+        ctx.drawImage(
+          this.tempCanvas,
+          x,
+          y,
+          width,
+          height,
+          zx + tempX,
+          zy + tempY,
+          zw,
+          zh,
+        );
+      }
+      ctx.restore();
+    };
   }
 
   function buildAppletMarkup(width, height) {
@@ -816,7 +941,7 @@ a.${OPEN_BUTTON_CLASS} {
       <applet-dummy name="paintbbs" width="${appletWidth}" height="${appletHeight}">
         <param name="image_width" value="${width}">
         <param name="image_height" value="${height}">
-        <param name="image_bkcolor" value="#f0e0d6">
+        <param name="image_bkcolor" value="${CANVAS_BACKGROUND_COLOR}">
         <param name="neo_show_right_button" value="true">
         <param name="neo_disable_grid_touch_move" value="true">
         <param name="neo_enable_zoom_out" value="true">
