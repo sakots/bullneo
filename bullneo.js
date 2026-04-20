@@ -815,6 +815,7 @@ a.${OPEN_BUTTON_CLASS} {
       <applet-dummy name="paintbbs" width="${appletWidth}" height="${appletHeight}">
         <param name="image_width" value="${width}">
         <param name="image_height" value="${height}">
+        <param name="image_bkcolor" value="#f0e0d6">
         <param name="neo_show_right_button" value="true">
         <param name="neo_disable_grid_touch_move" value="true">
         <param name="neo_enable_zoom_out" value="true">
