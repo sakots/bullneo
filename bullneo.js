@@ -2,7 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.1";
+  const BULLNEO_VERSION = "0.1.2";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -1229,6 +1229,10 @@ a.${OPEN_BUTTON_CLASS} {
     } else {
       debugLog("target form detected");
     }
+
+    open().catch((error) => {
+      setStatus(error.message, true);
+    });
   }
 
   window.BullNeo = {
