@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BULLNEO Local Test</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #f4efe6;
+        color: #2f2417;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      p,
+      li,
+      label,
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      .panel {
+        margin-top: 20px;
+        padding: 16px;
+        background: #fffaf0;
+        border: 1px solid #c6b493;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(47, 36, 23, 0.08);
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        box-sizing: border-box;
+        resize: vertical;
+      }
+
+      input[type="text"],
+      input[type="file"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button {
+        appearance: none;
+        padding: 8px 12px;
+        border: 1px solid #8f7757;
+        border-radius: 6px;
+        background: #fff3cf;
+        color: #2f2417;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #ffe7a0;
+      }
+
+      .preview {
+        display: grid;
+        gap: 12px;
+      }
+
+      #oejs {
+        width: 344px;
+        max-width: 100%;
+        min-height: 135px;
+        background: #f0e0d6;
+        border: 1px solid #9f8c70;
+      }
+
+      #baseform {
+        width: 100%;
+        min-height: 120px;
+        box-sizing: border-box;
+      }
+
+      code {
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>BULLNEO ローカル確認</h1>
+      <p>
+        このページは <code>bullneo.js</code> の動作確認用です。ブラウザで
+        <code>test/index.html</code> を開いて、投稿フォーム横の
+        <code>手書き(NEO)</code> から操作してください。
+      </p>
+
+      <section class="panel">
+        <h2>ダミー投稿フォーム</h2>
+        <form id="test-form">
+          <div class="grid">
+            <label>
+              件名
+              <input type="text" name="sub" value="BULLNEO test">
+            </label>
+            <label>
+              コメント
+              <textarea id="ftxa" name="com">ここに通常の本文が入ります。</textarea>
+            </label>
+            <label>
+              添付ファイル
+              <input type="file" name="upfile" accept="image/*">
+            </label>
+            <label>
+              <input type="checkbox" name="textonly">
+              画像なし
+            </label>
+            <input id="baseform" type="hidden" name="baseform" value="">
+            <div id="oebtnd"></div>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel preview">
+        <h2>反映先プレビュー</h2>
+        <canvas id="oejs" width="344" height="135"></canvas>
+        <label>
+          base64 PNG データ
+          <textarea id="baseform-view" readonly></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" id="refresh-state">現在値を更新</button>
+          <button type="button" id="clear-state">反映結果をクリア</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        const baseform = document.getElementById("baseform");
+        const baseformView = document.getElementById("baseform-view");
+        const canvas = document.getElementById("oejs");
+        const ctx = canvas.getContext("2d");
+
+        function syncState() {
+          baseformView.value =
+            baseform.value || baseform.getAttribute("value") || "";
+        }
+
+        document
+          .getElementById("refresh-state")
+          .addEventListener("click", syncState);
+
+        document
+          .getElementById("clear-state")
+          .addEventListener("click", () => {
+            baseform.value = "";
+            baseformView.value = "";
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#f0e0d6";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          });
+
+        ctx.fillStyle = "#f0e0d6";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        new MutationObserver(syncState).observe(baseform, {
+          attributes: true,
+          attributeFilter: ["value"],
+        });
+        syncState();
+      })();
+    </script>
+    <script src="../bullneo.js"></script>
+  </body>
+</html>

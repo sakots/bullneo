@@ -34,6 +34,8 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 `https://jun.2chan.net/oe/futaba.htm` のようにフォームが後から差し替わる板でも、添付欄つきフォームを監視して `手書き(NEO)` を再設置します。
 
+編集画面では、キャンバスサイズに加えて `手ブレ補正` のオン・オフと強さ `0` から `5` も `bullneo` 側で切り替えられます。
+
 ## 外部パレット
 
 外部テキストのパレットマトリクスを読み込む場合は、ブックマークレットの `bullneo.js` の URL に `bullneo_palette` を追加してください。省略した場合は、`bullneo.js` 内蔵のデフォルトパレットを使います。
@@ -69,12 +71,16 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 更新履歴
 
+### 2026/04/28 v0.1.1
+
+- 手ブレ補正を `bullneo` 側から操作できるようにした
+- 動作確認用ファイル追加
+
 ### 2026/04/21 v0.1.0
 
 - バージョン番号をかけるようにした
 - キャンバスの背景色を手書きのに寄せた
 - 描画処理の改善
-  - `neo_disable_stabilizer=true`を追加し手振れ補正を無効化した
 
 ### 2026/04/19
 

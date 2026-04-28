@@ -2,7 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.0";
+  const BULLNEO_VERSION = "0.1.1";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -10,6 +10,8 @@
   const WIDTH_ID = "bullneo-width";
   const HEIGHT_ID = "bullneo-height";
   const RESET_SIZE_ID = "bullneo-reset-size";
+  const STABILIZER_ENABLED_ID = "bullneo-stabilizer-enabled";
+  const STABILIZER_LEVEL_ID = "bullneo-stabilizer-level";
   const PALETTE_SELECT_ID = "bullneo-palette-select";
   const PALETTE_RELOAD_ID = "bullneo-palette-reload";
   const OPEN_BUTTON_CLASS = "bullneo-open";
@@ -66,6 +68,8 @@
     paletteUrl: detectPaletteUrl(),
     palettes: [],
     paletteLoaded: false,
+    stabilizerEnabled: true,
+    stabilizerLevel: 1,
   };
 
   function detectBaseUrl() {
@@ -315,16 +319,29 @@ a.${OPEN_BUTTON_CLASS} {
     return docs;
   }
 
+  function isInsideBullneo(node) {
+    return Boolean(
+      node &&
+        node.closest &&
+        (node.closest("#" + MODAL_ID) || node.closest("#" + PANEL_ID)),
+    );
+  }
+
   function findTargetFormInDocument(doc) {
     const activeForm = doc.activeElement && doc.activeElement.closest
       ? doc.activeElement.closest("form")
       : null;
-    if (activeForm && activeForm.querySelector(FILE_INPUT_SELECTOR)) {
+    if (
+      activeForm &&
+      !isInsideBullneo(activeForm) &&
+      activeForm.querySelector(FILE_INPUT_SELECTOR)
+    ) {
       return activeForm;
     }
 
-    const forms = Array.from(doc.forms || []).filter((form) =>
-      form.querySelector(FILE_INPUT_SELECTOR),
+    const forms = Array.from(doc.forms || []).filter(
+      (form) =>
+        !isInsideBullneo(form) && form.querySelector(FILE_INPUT_SELECTOR),
     );
 
     return (
@@ -335,7 +352,9 @@ a.${OPEN_BUTTON_CLASS} {
   }
 
   function findPseudoFormInDocument(doc) {
-    const fileInputs = Array.from(doc.querySelectorAll(FILE_INPUT_SELECTOR));
+    const fileInputs = Array.from(doc.querySelectorAll(FILE_INPUT_SELECTOR)).filter(
+      (input) => !isInsideBullneo(input),
+    );
     for (const input of fileInputs) {
       const container =
         input.closest("form") ||
@@ -372,6 +391,7 @@ a.${OPEN_BUTTON_CLASS} {
 
   function findFileInput(form) {
     if (!form) return null;
+    if (isInsideBullneo(form)) return null;
     let inputs = Array.from(form.querySelectorAll(FILE_INPUT_SELECTOR));
     if (inputs.length === 0) {
       const doc = form.ownerDocument || document;
@@ -424,6 +444,57 @@ a.${OPEN_BUTTON_CLASS} {
     const width = clampNumber(getWidthInput()?.value, 100, 2000, 400);
     const height = clampNumber(getHeightInput()?.value, 100, 2000, 400);
     return { width, height };
+  }
+
+  function getStabilizerEnabledInput() {
+    return document.getElementById(STABILIZER_ENABLED_ID);
+  }
+
+  function getStabilizerLevelInput() {
+    return document.getElementById(STABILIZER_LEVEL_ID);
+  }
+
+  function syncStabilizerStateFromInputs() {
+    const enabledInput = getStabilizerEnabledInput();
+    const levelInput = getStabilizerLevelInput();
+    if (enabledInput) {
+      state.stabilizerEnabled = enabledInput.checked;
+    }
+    if (levelInput) {
+      state.stabilizerLevel = clampNumber(levelInput.value, 0, 5, 1);
+    }
+  }
+
+  function syncStabilizerInputs() {
+    const enabledInput = getStabilizerEnabledInput();
+    const levelInput = getStabilizerLevelInput();
+    if (enabledInput) {
+      enabledInput.checked = state.stabilizerEnabled;
+    }
+    if (levelInput) {
+      levelInput.value = String(state.stabilizerLevel);
+      levelInput.disabled = !state.stabilizerEnabled;
+    }
+  }
+
+  function applyStabilizerSettings() {
+    syncStabilizerStateFromInputs();
+    if (!window.Neo) return;
+
+    if (!window.Neo.config) {
+      window.Neo.config = {};
+    }
+    window.Neo.config.neo_disable_stabilizer = state.stabilizerEnabled
+      ? "false"
+      : "true";
+
+    if (typeof window.Neo.setStabilizLevel === "function") {
+      window.Neo.setStabilizLevel(state.stabilizerLevel);
+    } else {
+      window.Neo.stabiliz_level = state.stabilizerLevel;
+    }
+
+    syncStabilizerInputs();
   }
 
   function clampNumber(value, min, max, fallback) {
@@ -584,6 +655,8 @@ a.${OPEN_BUTTON_CLASS} {
           <label>\u6a2a <input id="${WIDTH_ID}" type="number" min="100" max="2000" value="344"></label>
           <label>\u7e26 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="135"></label>
           <a href="#" id="${RESET_SIZE_ID}">344x135\u306b\u30ea\u30bb\u30c3\u30c8</a>
+          <label><input id="${STABILIZER_ENABLED_ID}" type="checkbox" checked> \u624b\u30d6\u30ec\u88dc\u6b63</label>
+          <label>\u5f37\u3055 <input id="${STABILIZER_LEVEL_ID}" type="number" min="0" max="5" value="1"></label>
           <button type="button" data-bullneo-action="rerender">\u3053\u306e\u5927\u304d\u3055\u3067\u958b\u304d\u76f4\u3059</button>
           <button type="button" data-bullneo-action="apply">\u753b\u50cf\u306b\u53cd\u6620</button>
           <button type="button" data-bullneo-action="clear">\u30af\u30ea\u30a2</button>
@@ -657,12 +730,34 @@ a.${OPEN_BUTTON_CLASS} {
         });
     });
 
+    const stabilizerEnabled = modal.querySelector(`#${STABILIZER_ENABLED_ID}`);
+    const stabilizerLevel = modal.querySelector(`#${STABILIZER_LEVEL_ID}`);
+    stabilizerEnabled.addEventListener("change", () => {
+      applyStabilizerSettings();
+      setStatus(
+        state.stabilizerEnabled
+          ? "\u624b\u30d6\u30ec\u88dc\u6b63\u3092\u6709\u52b9\u306b\u3057\u307e\u3057\u305f\u3002"
+          : "\u624b\u30d6\u30ec\u88dc\u6b63\u3092\u7121\u52b9\u306b\u3057\u307e\u3057\u305f\u3002",
+      );
+    });
+    stabilizerLevel.addEventListener("change", () => {
+      applyStabilizerSettings();
+      setStatus(
+        "\u624b\u30d6\u30ec\u88dc\u6b63\u306e\u5f37\u3055\u3092 " +
+          state.stabilizerLevel +
+          " \u306b\u5909\u66f4\u3057\u307e\u3057\u305f\u3002",
+      );
+    });
+    syncStabilizerInputs();
+
     document.body.appendChild(modal);
     return modal;
   }
 
   function ensureOpenButton(form) {
-    if (!form || form.querySelector(`.${OPEN_BUTTON_CLASS}`)) return;
+    if (!form || isInsideBullneo(form) || form.querySelector(`.${OPEN_BUTTON_CLASS}`)) {
+      return;
+    }
     const fileInput = findFileInput(form);
     if (!fileInput) return;
 
@@ -718,8 +813,8 @@ a.${OPEN_BUTTON_CLASS} {
     if (root.nodeType === 9) {
       ensureOpenButtonInOebtnd(root);
     }
-    let forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter((form) =>
-      findFileInput(form),
+    let forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter(
+      (form) => !isInsideBullneo(form) && findFileInput(form),
     );
     if (forms.length === 0 && root.nodeType === 9) {
       const pseudoForm = findPseudoFormInDocument(root);
@@ -743,6 +838,7 @@ a.${OPEN_BUTTON_CLASS} {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (!(node instanceof Element)) continue;
+          if (isInsideBullneo(node)) continue;
           if (node.matches?.(FORM_SELECTOR) || node.querySelector?.(FORM_SELECTOR)) {
             installLinks(targetDocument);
           }
@@ -946,7 +1042,7 @@ a.${OPEN_BUTTON_CLASS} {
         <param name="neo_disable_grid_touch_move" value="true">
         <param name="neo_enable_zoom_out" value="true">
         <param name="neo_confirm_unload" value="true">
-        <param name="neo_disable_stabilizer" value="true">
+        <param name="neo_disable_stabilizer" value="${state.stabilizerEnabled ? "false" : "true"}">
       </applet-dummy>
     `;
   }
@@ -956,6 +1052,7 @@ a.${OPEN_BUTTON_CLASS} {
     const modal = ensureModal();
     const panel = document.getElementById(PANEL_ID);
     const mount = modal.querySelector(`#${MOUNT_ID}`);
+    syncStabilizerStateFromInputs();
     const { width, height } = getRequestedCanvasSize();
     const appletWidth = Math.max(width + 140, 520);
     const appletHeight = Math.max(height + 170, 540);
@@ -980,6 +1077,7 @@ a.${OPEN_BUTTON_CLASS} {
     }
 
     window.Neo.start(false);
+    applyStabilizerSettings();
 
     const submitButton = document.getElementById("neo-submit");
     if (submitButton) {
