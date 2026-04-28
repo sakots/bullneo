@@ -656,7 +656,16 @@ a.${OPEN_BUTTON_CLASS} {
           <label>\u7e26 <input id="${HEIGHT_ID}" type="number" min="100" max="2000" value="135"></label>
           <a href="#" id="${RESET_SIZE_ID}">344x135\u306b\u30ea\u30bb\u30c3\u30c8</a>
           <label><input id="${STABILIZER_ENABLED_ID}" type="checkbox" checked> \u624b\u30d6\u30ec\u88dc\u6b63</label>
-          <label>\u5f37\u3055 <input id="${STABILIZER_LEVEL_ID}" type="number" min="0" max="5" value="1"></label>
+          <label>\u5f37\u3055
+            <select id="${STABILIZER_LEVEL_ID}">
+              <option value="0">0</option>
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </label>
           <button type="button" data-bullneo-action="rerender">\u3053\u306e\u5927\u304d\u3055\u3067\u958b\u304d\u76f4\u3059</button>
           <button type="button" data-bullneo-action="apply">\u753b\u50cf\u306b\u53cd\u6620</button>
           <button type="button" data-bullneo-action="clear">\u30af\u30ea\u30a2</button>
