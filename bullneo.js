@@ -2,7 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.2";
+  const BULLNEO_VERSION = "0.1.3";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -488,10 +488,10 @@ a.${OPEN_BUTTON_CLASS} {
       ? "false"
       : "true";
 
-    if (typeof window.Neo.setStabilizLevel === "function") {
-      window.Neo.setStabilizLevel(state.stabilizerLevel);
+    if (typeof window.Neo.setStabilizeLevel === "function") {
+      window.Neo.setStabilizeLevel(state.stabilizerLevel);
     } else {
-      window.Neo.stabiliz_level = state.stabilizerLevel;
+      window.Neo.stabilize_level = state.stabilizerLevel;
     }
 
     syncStabilizerInputs();
