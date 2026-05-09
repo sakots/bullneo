@@ -71,6 +71,10 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 更新履歴
 
+### 2026/05/09 v0.1.3
+
+- 手ブレ補正機能の誤字対応
+
 ### 2026/04/29 v0.1.2
 
 - ブックマークレット実行時に `手書き(NEO)` を押さなくても、そのままお絵描きフォームを開くようにした
