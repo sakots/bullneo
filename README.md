@@ -1,11 +1,15 @@
-# BULLNEO
+# BULLNEO & APPNEO
 
 BULLNEO（ぶるねお）は、ふたばちゃんねるの投稿フォームに `neo/dist/neo.js` を後付けで読み込み、描いた内容を PNG として添付欄へ戻すためのスクリプトです。
 
+APPNEO（あぷねお）は、ふたばちゃんねるで最新のNEO+αを使うためのスクリプトです。
+
 ## 使い方
 
-ブックマークレットとして次で使うことができます。
+ブックマークレットとして使うことができます。
 chromeなら、ブックマークバーに「ページを追加」で、URLを以下のjavascriptにしてください。
+
+お絵かきレス画面を表示してブックマークレットを起動してください
 
 ```javascript
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://neo.sakots.net/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
