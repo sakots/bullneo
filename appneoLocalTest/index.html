@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEO Test</title>
+    <link rel="stylesheet" href="../neo/dist/neo.css" />
+    <script src="../neo/dist/neo.js" charset="UTF-8"></script>
+    <script>
+      const params = location.search
+        .substring(1)
+        .split("&")
+        .reduce((result, query) => {
+          const [k, v] = query.split("=");
+          result[k] = decodeURI(v);
+          return result;
+        }, {});
+      const appW = params.w || 400;
+      const appH = params.h || 460;
+      const w = params.iw || 300;
+      const h = params.ih || 300;
+
+      // アプレットフィット
+			const originalWidth = appW;
+			const originalHeight = appH;
+
+      class AppFitManager {
+        constructor() {
+          this.originalWidth = originalWidth;
+          this.originalHeight = originalHeight;
+          this.isExpanded = false;
+          this.init();
+        }
+
+        init() {
+          this.document = document;
+          this.refreshTargets();
+        }
+
+        refreshTargets() {
+          this.appstage = this.document.getElementById("appstage");
+          this.target = this.document.getElementById("neo-pageView");
+          this.neoContainer = this.document.getElementById("neo-container");
+          this.palette = this.document.getElementById("dyntools");
+          this.fitExp = this.document.getElementById("fit_exp");
+          this.fitComp = this.document.getElementById("fit_comp");
+        }
+
+        getClientHeight() {
+          const client = this.document.compatMode && this.document.compatMode !== "BackCompat"
+            ? this.document.documentElement
+            : this.document.body;
+          return client.clientHeight - 10;
+        }
+
+        getClientWidth() {
+          const client = this.document.compatMode && this.document.compatMode !== "BackCompat"
+            ? this.document.documentElement
+            : this.document.body;
+          return client.clientWidth || window.innerWidth;
+        }
+
+        getExpandedWidth() {
+          this.refreshTargets();
+          const paletteWidth = this.palette ? this.palette.getBoundingClientRect().width : 0;
+          const gap = 36;
+          const availableWidth = this.getClientWidth() - paletteWidth - gap;
+          return Math.max(parseInt(this.originalWidth, 10), Math.floor(availableWidth));
+        }
+
+        setAppletSize(width, height) {
+          this.refreshTargets();
+          const appletWidth = parseInt(width, 10);
+          const appletHeight = parseInt(height, 10);
+
+          if (typeof Neo !== "undefined" && Neo.config) {
+            Neo.config.applet_width = appletWidth;
+            Neo.config.applet_height = appletHeight;
+          }
+
+          if (this.target) {
+            this.target.style.width = `${appletWidth}px`;
+            this.target.style.height = `${appletHeight}px`;
+          }
+
+          if (this.neoContainer) {
+            this.neoContainer.style.width = `${appletWidth}px`;
+            this.neoContainer.style.height = `${appletHeight}px`;
+          }
+        }
+
+        expand() {
+          if (this.isExpanded) return;
+          
+          const clientHeight = this.getClientHeight();
+          const contentWidth = this.getExpandedWidth();
+          
+          // 幅と高さを拡張
+          const width = this.target && contentWidth > this.target.clientWidth
+            ? contentWidth
+            : parseInt(this.originalWidth, 10);
+          const height = this.target && clientHeight > this.target.clientHeight
+            ? clientHeight
+            : parseInt(this.originalHeight, 10);
+          this.setAppletSize(width, height);
+          
+          // UI状態を更新
+          this.fitExp.style.display = "none";
+          this.fitComp.style.display = "block";
+          this.isExpanded = true;
+          
+          this.resetZoom();
+          console.log("Expanded: ", this.target.style.width, this.target.style.height);
+        }
+
+        compress() {
+          if (!this.isExpanded) return;
+          
+          // 元のサイズに戻す
+          this.setAppletSize(this.originalWidth, this.originalHeight);
+          
+          // UI状態を更新
+          this.fitExp.style.display = "block";
+          this.fitComp.style.display = "none";
+          this.isExpanded = false;
+          
+          this.resetZoom();
+        }
+
+        resetZoom() {
+          // ズームをリセット
+          if (typeof Neo !== 'undefined' && Neo.painter) {
+            Neo.painter.setZoom(1);
+            Neo.resizeCanvas();
+            Neo.painter.updateDestCanvas();
+          }
+        }
+
+        toggle() {
+          if (this.isExpanded) {
+            this.compress();
+          } else {
+            this.expand();
+          }
+        }
+      }
+
+      // DOMContentLoadedイベントで初期化
+      document.addEventListener('DOMContentLoaded', function() {
+        window.appFitManager = new AppFitManager();
+        window.appFit = function (mode) {
+          if (mode) window.appFitManager.compress();
+          else window.appFitManager.expand();
+        };
+      });
+
+      // ダイナミックパレット
+      class DynamicPaletteManager {
+        constructor() {
+          this.DynamicColor = 1;	// パレットリストに色表示
+          this.Palettes = [];
+          this.customP = 0;
+          this.init();
+        }
+
+        init() {
+          // グローバル関数として公開（後方互換性のため）
+          window.setPalette = this.setPalette.bind(this);
+          window.PaletteSave = this.PaletteSave.bind(this);
+          window.PaletteNew = this.PaletteNew.bind(this);
+          window.PaletteRenew = this.PaletteRenew.bind(this);
+          window.PaletteDel = this.PaletteDel.bind(this);
+          window.P_Effect = this.P_Effect.bind(this);
+          window.PaletteMatrixGet = this.PaletteMatrixGet.bind(this);
+          window.PaletteMatrixSet = this.PaletteMatrixSet.bind(this);
+          window.PaletteMatrixHelp = this.PaletteMatrixHelp.bind(this);
+          window.PaletteSet = this.PaletteSet.bind(this);
+          window.PaletteListSetColor = this.PaletteListSetColor.bind(this);
+          window.GetBright = this.GetBright.bind(this);
+          window.Change_ = this.Change_.bind(this);
+          window.ChangeGrad = this.ChangeGrad.bind(this);
+          window.Hex = this.Hex.bind(this);
+          window.Hex_ = this.Hex_.bind(this);
+          window.GetPalette = this.GetPalette.bind(this);
+          window.GradSelC = this.GradSelC.bind(this);
+          window.GradView = this.GradView.bind(this);
+          window.showHideLayer = this.showHideLayer.bind(this);
+        }
+
+        parsePaletteEntry(entry, index) {
+          if (entry == null) return null;
+
+          let name = `Palette ${index + 1}`;
+          let source = String(entry);
+
+          if (typeof entry === "object") {
+            name = entry.name || name;
+            source = Array.isArray(entry.colors) ? entry.colors.join("\n") : String(entry.colors || "");
+          } else {
+            const matrixName = source.match(/^!([^\n]+)/);
+            const commaName = source.match(/^\s*([^,\n]+)\s*,/);
+            if (matrixName) name = matrixName[1].trim();
+            else if (commaName) name = commaName[1].trim();
+          }
+
+          const colors = typeof Neo !== "undefined" && Neo.formatColors
+            ? Neo.formatColors(source)
+            : (source.match(/#?[0-9a-fA-F]{6}\b/g) || [])
+                .slice(0, 14)
+                .map((color) => "#" + color.replace("#", "").toUpperCase())
+                .join("\n");
+
+          return colors ? { name, colors } : null;
+        }
+
+        parsePaletteData(paletteData) {
+          if (!paletteData) return [];
+
+          if (typeof paletteData === "string") {
+            return paletteData
+              .split(/\n(?=!)/)
+              .map((entry, index) => this.parsePaletteEntry(entry, index))
+              .filter(Boolean);
+          }
+
+          if (!Array.isArray(paletteData)) return [];
+
+          return paletteData
+            .map((entry, index) => this.parsePaletteEntry(entry, index))
+            .filter(Boolean);
+        }
+
+        syncPaletteOptions(entries) {
+          const select = document.Palette ? document.Palette.select : null;
+          if (!select) return;
+
+          while (select.options.length > 1) {
+            select.options[1] = null;
+          }
+
+          entries.forEach((entry) => {
+            select.options[select.options.length] = new Option(entry.name);
+          });
+
+          select.size = Math.min(Math.max(select.options.length, 1), 30);
+        }
+
+        // パレットデータを設定
+        setPaletteData(paletteData) {
+          const entries = this.parsePaletteData(paletteData);
+          const temporaryPalette = this.Palettes[0] || "";
+
+          this.Palettes = [temporaryPalette].concat(entries.map((entry) => entry.colors));
+          this.syncPaletteOptions(entries);
+          this.PaletteListSetColor();
+        }
+
+        // パレットを設定
+        setPalette() {
+          const d = document;
+          if (d.paintbbs && this.Palettes[d.Palette.select.selectedIndex]) {
+            d.paintbbs.setColors(this.Palettes[d.Palette.select.selectedIndex]);
+            if (!d.grad || !d.grad.view || !d.grad.view.checked) return;
+            this.GetPalette();
+          }
+        }
+
+        // パレットを一時保存
+        async PaletteSave() {
+          if (document.paintbbs) {
+            this.Palettes[0] = String(await document.paintbbs.getColors());
+          }
+        }
+
+        // 新しいパレットを作成
+        async PaletteNew() {
+          const d = document;
+          if (!d.paintbbs) return;
+          
+          const p = String(await d.paintbbs.getColors());
+          const s = d.Palette.select;
+          this.Palettes[s.length] = p;
+          this.customP++;
+          
+          const str = prompt("パレット名", "パレット " + this.customP);
+          if (str == null || str === "") {
+            this.customP--;
+            return;
+          }
+          
+          s.options[s.length] = new Option(str);
+          if (30 > s.length) s.size = s.length;
+          this.PaletteListSetColor();
+        }
+
+        // パレットを更新
+        async PaletteRenew() {
+          const d = document;
+          if (!d.paintbbs) return;
+          
+          this.Palettes[d.Palette.select.selectedIndex] = String(await d.paintbbs.getColors());
+          this.PaletteListSetColor();
+        }
+
+        // パレットを削除
+        PaletteDel() {
+          const p = this.Palettes.length;
+          const s = document.Palette.select;
+          const i = s.selectedIndex;
+          
+          if (i === -1) return;
+          
+          const flag = confirm("「" + s.options[i].text + "」を削除してよろしいですか？");
+          if (!flag) return;
+          
+          s.options[i] = null;
+          let j = i;
+          while (p > j) {
+            this.Palettes[j] = this.Palettes[j + 1];
+            j++;
+          }
+          
+          if (30 > s.length) s.size = s.length;
+        }
+
+        // パレット効果（明度調整・反転）
+        async P_Effect(v) {
+          v = parseInt(v);
+          const x = v === 255 ? -1 : 1;
+          const d = document.paintbbs;
+          
+          if (!d) return;
+          
+          const p = String(await d.getColors()).split("\n");
+          const l = p.length;
+          let s = "";
+          
+          for (let n = 0; l > n; n++) {
+            let R = v + (parseInt("0x" + p[n].substring(1, 3)) * x);
+            let G = v + (parseInt("0x" + p[n].substring(3, 5)) * x);
+            let B = v + (parseInt("0x" + p[n].substring(5, 7)) * x);
+            
+            if (R > 255) R = 255;
+            else if (0 > R) R = 0;
+            if (G > 255) G = 255;
+            else if (0 > G) G = 0;
+            if (B > 255) B = 255;
+            else if (0 > B) B = 0;
+            
+            s += "#" + this.Hex(R) + this.Hex(G) + this.Hex(B) + "\n";
+          }
+          
+          d.setColors(s);
+          this.PaletteListSetColor();
+        }
+
+        // パレットマトリクス取得
+        async PaletteMatrixGet() {
+          const d = document.Palette;
+          const p = this.Palettes.length;
+          const s = d.select;
+          const m = d.m_m.selectedIndex;
+          const t = d.setr;
+          
+          switch (m) {
+            case 0:
+            case 2:
+            default:
+              t.value = "";
+              let n = 0, c = 0;
+              while (p > n) {
+                if (s.options[n] != null) {
+                  t.value = t.value + "\n!" + s.options[n].text + "\n" + this.Palettes[n];
+                  c++;
+                }
+                n++;
+              }
+              alert("パレット数：" + c + "\nパレットマトリクスを取得しました");
+              break;
+            case 1:
+              t.value = "!Palette\n" + String(await document.paintbbs.getColors());
+              alert("現在使用されているパレット情報を取得しました");
+              break;
+          }
+          t.value = t.value.trim() + "\n!Matrix";
+        }
+
+        // パレットマトリクス設定
+        PaletteMatrixSet() {
+          const m = document.Palette.m_m.selectedIndex;
+          const str = "パレットマトリクスをセットします。";
+          let flag;
+          
+          switch (m) {
+            case 0:
+            default:
+              flag = confirm(str + "\n現在の全パレット情報は失われますがよろしいですか？");
+              break;
+            case 1:
+              flag = confirm(str + "\n現在使用しているパレットと置き換えますがよろしいですか？");
+              break;
+            case 2:
+              flag = confirm(str + "\n現在のパレット情報に追加しますがよろしいですか？");
+              break;
+          }
+          
+          if (!flag) return;
+          
+          this.PaletteSet();
+          const s = document.Palette.select;
+          if (s.length < 30) {
+            s.size = s.length;
+          } else {
+            s.size = 30;
+          }
+          if (this.DynamicColor) this.PaletteListSetColor();
+        }
+
+        // パレットマトリクスヘルプ
+        PaletteMatrixHelp() {
+          alert("★PALETTE MATRIX\nパレットマトリクスとはパレット情報を列挙したテキストを用いる事により\n自由なパレット設定を使用する事が出来ます。\n\n□マトリクスの取得\n1)「取得」ボタンよりパレットマトリクスを取得します。\n2)取得された情報が下のテキストエリアに出ます、これを全てコピーします。\n3)このマトリクス情報をテキストとしてファイルに保存しておくなりしましょう。\n\n□マトリクスのセット\n1）コピーしたマトリクスを下のテキストエリアに貼り付け(ペースト)します。\n2)ファイルに保存してある場合は、それをコピーし貼り付けます。\n3)「セット」ボタンを押せば保存されたパレットが使用できます。\n\n余分な情報があるとパレットが正しくセットされませんのでご注意下さい。");
+        }
+
+        // パレット設定
+        PaletteSet() {
+          const d = document.Palette;
+          const se = d.setr.value;
+          const s = d.select;
+          const m = d.m_m.selectedIndex;
+          const l = se.length;
+          
+          if (l < 1) {
+            alert("マトリクス情報がありません。");
+            return;
+          }
+          
+          let n = 0, o = 0, e = 0;
+          
+          switch (m) {
+            case 0:
+            default:
+              n = s.length;
+              while (n > 0) {
+                n--;
+                s.options[n] = null;
+              }
+            case 2:
+              let i = s.options.length;
+              n = se.indexOf("!", 0) + 1;
+              if (n === 0) return;
+              
+              const Matrix1 = 1;
+              const Matrix2 = -1;
+              
+              while (n < l) {
+                e = se.indexOf("\n#", n);
+                if (e === -1) return;
+                
+                const pn = se.substring(n, e + Matrix1);
+                o = se.indexOf("!", e);
+                if (o === -1) return;
+                
+                const pa = se.substring(e + 1, o + Matrix2);
+                if (pn !== "Palette") {
+                  if (i >= 0) s.options[i] = new Option(pn);
+                  this.Palettes[i] = pa;
+                  i++;
+                } else {
+                  document.paintbbs.setColors(pa);
+                }
+                n = o + 1;
+              }
+              break;
+            case 1:
+              n = se.indexOf("!", 0) + 1;
+              if (n === 0) return;
+              e = se.indexOf("\n#", n);
+              o = se.indexOf("!", e);
+              if (e >= 0) {
+                const pa = se.substring(e + 1, o - 1);
+                document.paintbbs.setColors(pa);
+              }
+          }
+          this.PaletteListSetColor();
+        }
+
+        // パレットリストに色を設定
+        PaletteListSetColor() {
+          const s = document.Palette ? document.Palette.select : null;
+          if (!s || !this.Palettes || this.Palettes.length === 0) {
+            return;
+          }
+          
+          for (let i = 1; s.options.length > i; i++) {
+            if (this.Palettes[i]) {
+              const c = this.Palettes[i].split("\n");
+              
+              // パレットデータから有効な色を探す
+              let backgroundColor = null;
+              
+              // 5番目の要素（インデックス4）を優先
+              if (c[4] && c[4].startsWith('#') && c[4].length === 7) {
+                backgroundColor = c[4];
+              } else {
+                // 5番目がなければ最後の要素を探す
+                for (let j = c.length - 1; j >= 0; j--) {
+                  if (c[j] && c[j].startsWith('#') && c[j].length === 7) {
+                    backgroundColor = c[j];
+                    break;
+                  }
+                }
+              }
+              
+              if (backgroundColor) {
+                s.options[i].style.background = backgroundColor;
+                s.options[i].style.color = this.GetBright(backgroundColor);
+              }
+            }
+          }
+        }
+
+        // 明度を取得
+        GetBright(c) {
+          const r = parseInt("0x" + c.substring(1, 3));
+          const g = parseInt("0x" + c.substring(3, 5));
+          const b = parseInt("0x" + c.substring(5, 7));
+          const max = (r >= g) ? (r >= b) ? r : b : (g >= b) ? g : b;
+          return 128 > max ? "#FFFFFF" : "#000000";
+        }
+
+        // グラデーション変更
+        Change_() {
+          if (!document.grad) return;
+          const st = document.grad.pst.value;
+          const ed = document.grad.ped.value;
+          
+          if (isNaN(parseInt("0x" + st))) return;
+          if (isNaN(parseInt("0x" + ed))) return;
+          this.GradView("#" + st, "#" + ed);
+        }
+
+        // グラデーション生成
+        ChangeGrad() {
+          const d = document;
+          if (!d.grad || !d.paintbbs) return;
+          const st = d.grad.pst.value;
+          const ed = d.grad.ped.value;
+          this.Change_();
+          
+          const degi_R = parseInt("0x" + st.substring(0, 2));
+          const degi_G = parseInt("0x" + st.substring(2, 4));
+          const degi_B = parseInt("0x" + st.substring(4, 6));
+          
+          let R = parseInt((degi_R - parseInt("0x" + ed.substring(0, 2))) / 15);
+          let G = parseInt((degi_G - parseInt("0x" + ed.substring(2, 4))) / 15);
+          let B = parseInt((degi_B - parseInt("0x" + ed.substring(4, 6))) / 15);
+          
+          if (isNaN(R)) R = 1;
+          if (isNaN(G)) G = 1;
+          if (isNaN(B)) B = 1;
+          
+          let p = "";
+          for (let cnt = 0, m1 = degi_R, m2 = degi_G, m3 = degi_B; 14 > cnt; cnt++, m1 -= R, m2 -= G, m3 -= B) {
+            if ((m1 > 255) || (0 > m1)) {
+              R *= -1;
+              m1 -= R;
+            }
+            if ((m2 > 255) || (0 > m2)) {
+              G *= -1;
+              m2 -= G;
+            }
+            if ((m3 > 255) || (0 > m3)) {
+              B *= -1;
+              m2 -= B;
+            }
+            p += "#" + this.Hex(m1) + this.Hex(m2) + this.Hex(m3) + "\n";
+          }
+          d.paintbbs.setColors(p);
+        }
+
+        // 16進数変換
+        Hex(n) {
+          n = parseInt(n);
+          if (0 > n) n *= -1;
+          let hex = "";
+          let m, k;
+          
+          while (n > 16) {
+            m = n;
+            if (n > 16) {
+              n = parseInt(n / 16);
+              m -= (n * 16);
+            }
+            k = this.Hex_(m);
+            hex = k + hex;
+          }
+          k = this.Hex_(n);
+          hex = k + hex;
+          while (2 > hex.length) {
+            hex = "0" + hex;
+          }
+          return hex;
+        }
+
+        // 16進数変換（内部関数）
+        Hex_(n) {
+          if (!isNaN(n)) {
+            if (n === 10) n = "A";
+            else if (n === 11) n = "B";
+            else if (n === 12) n = "C";
+            else if (n === 13) n = "D";
+            else if (n === 14) n = "E";
+            else if (n === 15) n = "F";
+          } else {
+            n = "";
+          }
+          return n;
+        }
+
+        // パレット取得
+        async GetPalette() {
+          const d = document;
+          if (!d.paintbbs || !d.grad) return;
+          
+          const p = String(await d.paintbbs.getColors());
+          if (p === "null" || p === "") return;
+          
+          const ps = p.split("\n");
+          window.ps = ps; // グローバル変数として設定（後方互換性のため）
+          
+          const st = d.grad.p_st.selectedIndex;
+          const ed = d.grad.p_ed.selectedIndex;
+          
+          d.grad.pst.value = ps[st].substring(1, 7);
+          d.grad.ped.value = ps[ed].substring(1, 7);
+          
+          this.GradSelC();
+          this.GradView(ps[st], ps[ed]);
+          this.PaletteListSetColor();
+        }
+
+        // グラデーション選択色
+        GradSelC() {
+          if (!document.grad || !document.grad.view.checked) return;
+          
+          const d = document.grad;
+          const l = window.ps ? window.ps.length : 0;
+          let pe = "";
+          
+          for (let n = 0; l > n; n++) {
+            let R = 255 + (parseInt("0x" + window.ps[n].substring(1, 3)) * -1);
+            let G = 255 + (parseInt("0x" + window.ps[n].substring(3, 5)) * -1);
+            let B = 255 + (parseInt("0x" + window.ps[n].substring(5, 7)) * -1);
+            
+            if (R > 255) R = 255;
+            else if (0 > R) R = 0;
+            if (G > 255) G = 255;
+            else if (0 > G) G = 0;
+            if (B > 255) B = 255;
+            else if (0 > B) B = 0;
+            
+            pe += "#" + this.Hex(R) + this.Hex(G) + this.Hex(B) + "\n";
+          }
+          
+          pe = pe.split("\n");
+          for (let n = 0; l > n; n++) {
+            d.p_st.options[n].style.background = window.ps[n];
+            d.p_st.options[n].style.color = pe[n];
+            d.p_ed.options[n].style.background = window.ps[n];
+            d.p_ed.options[n].style.color = pe[n];
+          }
+        }
+
+        // グラデーションビュー
+        GradView(st, ed) {
+          const d = document;
+          if (!d.grad || !d.grad.view.checked) return;
+        }
+
+        // レイヤー表示/非表示切り替え
+        showHideLayer() {
+          const d = document;
+          let l;
+
+          if (!d.grad) return;
+          
+          if (d.layers) {
+            l = d.layers["psft"];
+          } else {
+            l = d.all("psft").style;
+          }
+          
+          if (!d.grad.view.checked) {
+            l.visibility = "hidden";
+          }
+          if (d.grad.view.checked) {
+            l.visibility = "visible";
+            this.GetPalette();
+          }
+        }
+      }
+
+      // グローバルインスタンスを作成
+      window.dynamicPaletteManager = new DynamicPaletteManager();
+		</script>
+  </head>
+
+  <body>
+    <a href="viewer.html">PCH Test</a>
+    <h1>PaintBBS NEO Test</h1>
+    <div class="container">
+      <section id="appstage">
+        <div id="appletdummy"></div>
+        <!-- 動的パレットスクリプト -->
+        <script>
+          // パレットデータの初期化
+          var Palettes = new Array();
+          Palettes[0] = "No.01 赤  ,	FFDFDF,FFBFBF,FF9F9F,FF7F7F,FF5F5F,FF3F3F,FF0000,DF0000,BF0000,9F0000,7F0000,5F0000,FF1F1F,3F0000";
+          Palettes[1] = "No.02 鳶  ,	FFE7DF,FFCFBF,FFB79F,FF9F7F,FF875F,FF6F3F,FF3F00,DF3700,BF2F00,9F2700,7F1F00,5F1700,FF571F,3F0F00";
+          Palettes[2] = "No.03 山吹,	FFEFDF,FFDFBF,FFCF9F,FFBF7F,FFAF5F,FF9F3F,FF7F00,DF6F00,BF5F00,9F4F00,7F3F00,5F2F00,FF8F1F,3F1F00";
+          Palettes[3] = "No.04 黄金,	FFF7DF,FFEFBF,FFE79F,FFDF7F,FFD75F,FFCF3F,FFBF00,DFA700,BF8F00,9F7700,7F5F00,5F4700,FFC71F,3F2F00";
+          Palettes[4] = "No.05 黄  ,	FFFFDF,FFFFBF,FFFF9F,FFFF7F,FFFF5F,FFFF3F,FFFF00,DFDF00,BFBF00,9F9F00,7F7F00,5F5F00,FFFF1F,3F3F00";
+          Palettes[5] = "No.06 若芽,	F7FFDF,EFFFBF,E7FF9F,DFFF7F,D7FF5F,CFFF3F,BFFF00,A7DF00,8FBF00,779F00,5F7F00,475F00,C7FF1F,2F3F00";
+          Palettes[6] = "No.07 萌黄,	EFFFDF,DFFFBF,CFFF9F,BFFF7F,AFFF5F,9FFF3F,7FFF00,6FDF00,5FBF00,4F9F00,3F7F00,2F5F00,8FFF1F,1F3F00";
+          Palettes[7] = "No.08 若葉,	E7FFDF,CFFFBF,B7FF9F,9FFF7F,87FF5F,6FFF3F,3FFF00,37DF00,3FBF00,279F00,1F7F00,175F00,57FF1F,0F3F00";
+          Palettes[8] = "No.09 緑  ,	DFFFDF,BFFFBF,9FFF9F,7FFF7F,5FFF5F,3FFF3F,00FF00,00DF00,00BF00,009F00,007F00,005F00,1FFF1F,003F00";
+          Palettes[9] = "No.10 青磁,	DFFFE7,BFFFCF,9FFFB7,7FFF9F,5FFF87,3FFF6F,00FF3F,00DF37,00BF3F,009F27,007F1F,005F17,1FFF57,003F0F";
+          Palettes[10] = "No.11 常磐,	DFFFEF,BFFFDF,9FFFCF,7FFFBF,5FFFAF,3FFF9F,00FF7F,00DF6F,00BF5F,009F4F,007F3F,005F2F,1FFF8F,003F1F";
+          Palettes[11] = "No.12 浅葱,	DFFFF7,BFFFEF,9FFFE7,7FFFDF,5FFFD7,3FFFCF,00FFBF,00DFA7,00BF8F,009F77,007F5F,005F47,1FFFC7,003F2F";
+          Palettes[12] = "No.13 水  ,	DFFFFF,BFFFFF,9FFFFF,7FFFFF,5FFFFF,3FFFFF,00FFFF,00DFDF,00BFBF,009F9F,007F7F,005F5F,1FFFFF,003F3F";
+          Palettes[13] = "No.14 空  ,	DFF7FF,BFEFFF,9FE7FF,7FDFFF,5FD7FF,3FCFFF,00BFFF,00A7DF,008FBF,00779F,005F7F,00475F,1FC7FF,002F3F";
+          Palettes[14] = "No.15 海  ,	DFEFFF,BFDFFF,9FCFFF,7FBFFF,5FAFFF,3F9FFF,007FFF,006FDF,005FBF,004F9F,003F7F,002F5F,1F8FFF,001F3F";
+          Palettes[15] = "No.16 露草,	DFE7FF,BFCFFF,9FB7FF,7F9FFF,5F87FF,3F6FFF,003FFF,0037DF,003FBF,00279F,001F7F,00175F,1F57FF,000F3F";
+          Palettes[16] = "No.17 青  ,	DFDFFF,BFBFFF,9F9FFF,7F7FFF,5F5FFF,3F3FFF,0000FF,0000DF,0000BF,00009F,00007F,00005F,1F1FFF,00003F";
+          Palettes[17] = "No.18 桔梗,	E7DFFF,CFBFFF,B79FFF,9F7FFF,875FFF,6F3FFF,3F00FF,3700DF,3F00BF,27009F,1F007F,17005F,571FFF,0F003F";
+          Palettes[18] = "No.19 藤  ,	EFDFFF,DFBFFF,CF9FFF,BF7FFF,AF5FFF,9F3FFF,7F00FF,6F00DF,5F00BF,4F009F,3F007F,2F005F,8F1FFF,1F003F";
+          Palettes[19] = "No.20 葡萄,	F7DFFF,EFBFFF,E79FFF,DF7FFF,D75FFF,CF3FFF,BF00FF,A700DF,8F00BF,77009F,5F007F,47005F,C71FFF,2F003F";
+          Palettes[20] = "No.21 紫  ,	FFDFFF,FFBFFF,FF9FFF,FF7FFF,FF5FFF,FF3FFF,FF00FF,DF00DF,BF00BF,9F009F,7F007F,5F005F,FF1FFF,3F003F";
+          Palettes[21] = "No.22 紫暗,	FFDFF7,FFBFEF,FF9FE7,FF7FDF,FF5FD7,FF3FCF,FF00BF,DF00A7,BF008F,9F0077,7F005F,5F0047,FF1FC7,3F002F";
+          Palettes[22] = "No.23 梅紫,	FFDFEF,FFBFDF,FF9FCF,FF7FBF,FF5FAF,FF3F9F,FF007F,DF006F,BF005F,9F004F,7F003F,5F002F,FF1F8F,3F001F";
+          Palettes[23] = "No.24 茜  ,	FFDFE7,FFBFCF,FF9FB7,FF7F9F,FF5F87,FF3F6F,FF003F,DF0037,BF003F,9F0027,7F001F,5F0017,FF1F57,3F000F";
+          Palettes[24] = "No.25 白黒,	F0F0F0,E0E0E0,D0D0D0,C0C0C0,B0B0B0,A0A0A0,808080,707070,606060,505050,404040,303030,909090,202020";
+          Palettes[25] = "No.26 肌  ,	FFF2E1,FFEED7,FFE9CD,FFE5C3,FFE1B9,FFDCAF,FFEDE1,FFE7D7,FFE1CD,FFDBC3,FFD5B9,FFCFAF,FFD8A5,FFC9A5";
+          Palettes[26] = "No.27 褐  ,	ECDBCC,E2C6AE,D7B291,CD9D73,C18957,AE7542,916137,744E2C,573A21,3A2716,1D130D,120800,FCECE2,F9DDCF";
+          Palettes[27] = "No.28 淡  ,	FFC3C3,FDFFC3,C3FFC7,C3F9FF,CBC3FF,FFC3F4,FFE2C3,DEFFC3,C3FFE6,C3DAFF,EBC3FF,FFC3D5,FCECE2,F9DDCF";
+          Palettes[28] = "No.29 標準,	000000,B47575,FA9696,FFB6FF,25C7C9,E7962D,FFFFFF,888888,C096C0,8080FF,E7E58D,99CB7B,FCECE2,F9DDCF";
+        </script>
+        <script>
+          // パレットデータをマネージャーに設定
+          document.addEventListener('DOMContentLoaded', function() {
+            // 少し遅延させて確実にマネージャーが初期化されるのを待つ
+            setTimeout(function() {
+              if (window.dynamicPaletteManager && window.Palettes) {
+                window.dynamicPaletteManager.setPaletteData(window.Palettes);
+                // 初期化後にパレットリストの色を設定
+                if (window.dynamicPaletteManager.DynamicColor) {
+                  window.dynamicPaletteManager.PaletteListSetColor();
+                }
+              }
+            }, 100);
+          });
+        </script>
+
+        <script>
+          const html = `
+            <div id="paintbbs"></div>
+            <div class="app" id="apps">
+              <applet-dummy name="paintbbs" width="${appW}" height="${appH}" >
+                <param name="image_width" value="${w}">
+                <param name="image_height" value="${h}">
+                <param name="thumbnail_type" value="animation">
+                <param name="neo_show_right_button" value="true">
+                <param name="neo_disable_grid_touch_move" value="true">
+                <param name="neo_disable_turn_original_glitch" value="true">
+                <param name="neo_enable_zoom_out" value="true">
+                <PARAM NAME="neo_emulation_mode" VALUE="2.04">
+              </applet-dummy>
+            </div>
+            <br>
+            <form>
+              <input type="number" name="w" value="${appW}"> x
+              <input type="number" name="h" value="${appH}"> Applet<br>
+              <input type="number" name="iw" value="${w}"> x
+              <input type="number" name="ih" value="${h}"> Canvas<br>
+              <input type="reset" value="RESET"><br>
+              <input type="submit" value="RELOAD">
+            </form>
+          `;
+          const appletdummy = document.getElementById("appletdummy");
+          appletdummy.insertAdjacentHTML("afterbegin", html);
+
+          document.paintBBSCallback = function (str) {
+            if (str === "check") {
+              const image = Neo.painter.getImage();
+              const animation = Neo.painter.getThumbnail("animation");
+
+              const img = document.createElement("img");
+              img.src = image.toDataURL("image/png");
+              img.className = "sample";
+
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(animation);
+              a.innerHTML = a.download = new Date() - 0 + ".pch";
+
+              const top = document.querySelector("img.sample");
+              document.body.insertBefore(img, top);
+              document.body.insertBefore(a, top);
+              return false;
+            }
+          };
+        </script>
+      </section>
+
+      <div class="palette" id="dyntools">
+        <form name="Palette">
+          <fieldset id="fit_exp">
+            <legend>FIT!</legend>
+            <input class="button" type="button" value="← FIT →" onclick="appFit(0)">
+          </fieldset>
+          <fieldset id="fit_comp" style="display: none;">
+            <legend>FIT!</legend>
+            <input class="button" type="button" value="→ FIT ←" onclick="appFit(1)">
+          </fieldset>
+          <fieldset>
+            <legend>TOOL</legend>
+            <input class="button" type="button" value="左" onclick="Neo.setToolSide(true)">
+            <input class="button" type="button" value="右" onclick="Neo.setToolSide(false)">
+            手ぶれ
+            <select onchange="Neo.setStabilizeLevel(this.value)">
+              <option value="0">0</option>
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </fieldset>
+          <fieldset>
+            <legend>PALETTE</legend>
+            <select class="form palette_set" name="select" size="13" onChange="setPalette()" id="palnames">
+              <option>一時パレット</option>
+              <option>No.01 赤  </option>
+              <option>No.02 鳶  </option>
+              <option>No.03 山吹</option>
+              <option>No.04 黄金</option>
+              <option>No.05 黄  </option>
+              <option>No.06 若芽</option>
+              <option>No.07 萌黄</option>
+              <option>No.08 若葉</option>
+              <option>No.09 緑  </option>
+              <option>No.10 青磁</option>
+              <option>No.11 常磐</option>
+              <option>No.12 浅葱</option>
+              <option>No.13 水  </option>
+              <option>No.14 空  </option>
+              <option>No.15 海  </option>
+              <option>No.16 露草</option>
+              <option>No.17 青  </option>
+              <option>No.18 桔梗</option>
+              <option>No.19 藤  </option>
+              <option>No.20 葡萄</option>
+              <option>No.21 紫  </option>
+              <option>No.22 紫暗</option>
+              <option>No.23 梅紫</option>
+              <option>No.24 茜  </option>
+              <option>No.25 白黒</option>
+              <option>No.26 肌  </option>
+              <option>No.27 褐  </option>
+              <option>No.28 淡  </option>
+              <option>No.29 標準</option>
+            </select><br>
+            <input class="button" type="button" value="一時保存" onClick="PaletteSave()"><br>
+            <input class="button" type="button" value="作成" onClick="PaletteNew()">
+            <input class="button" type="button" value="変更" onClick="PaletteRenew()">
+            <input class="button" type="button" value="削除" onClick="PaletteDel()"><br>
+            <input class="button" type="button" value="明＋" onClick="P_Effect(10)">
+            <input class="button" type="button" value="明－" onClick="P_Effect(-10)">
+            <input class="button" type="button" value="反転" onClick="P_Effect(255)">
+          </fieldset>
+          <fieldset>
+            <legend>MATRIX</legend>
+            <form>
+            <select class="form" name="m_m">
+              <option value="0">全体</option>
+              <option value="1">現在</option>
+              <option value="2">追加</option>
+            </select>
+            <input type="button" class="button" name="m_g" value="GET" onclick="PaletteMatrixGet()">
+            <input type="button" class="button" name="m_h" value="SET" onclick="PaletteMatrixSet()">
+            <input type="button" class="button" name="1" value=" ? " onclick="PaletteMatrixHelp()"><br>
+            <textarea class="form" name="setr" rows="1" cols="13" onmouseover="this.select()"></textarea>
+            </form>
+          </fieldset>
+          <fieldset>
+            <legend>GRADATION</legend>
+            <form name="grad">
+              <input type="checkbox" name="view" onclick="showHideLayer()">
+              <input type="button" class="button" value=" OK " onclick="ChangeGrad()">
+              <input type="color">
+              <br>
+              <select class="form" name="p_st" onchange="GetPalette()">
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+                <option>6</option>
+                <option>7</option>
+                <option>8</option>
+                <option>9</option>
+                <option>10</option>
+                <option>11</option>
+                <option>12</option>
+                <option>13</option>
+                <option>14</option>
+              </select>
+              <input class="form" type="text" name="pst" size="8" onkeypress="Change_()" onchange="Change_()"><br>
+              <select class="form" name="p_ed" onchange="GetPalette()">
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+                <option>6</option>
+                <option>7</option>
+                <option>8</option>
+                <option>9</option>
+                <option>10</option>
+                <option>11</option>
+                <option selected>12</option>
+                <option>13</option>
+                <option>14</option>
+              </select>
+              <input class="form" type="text" name="ped" size="8" onkeypress="Change_()" onchange="Change_()"><div id="psft" style="position:absolute;width:100px;height:30px;z-index:1;left:5px;top:10px;"></div>
+            </form>
+          </fieldset>
+          <p class="c">DynamicPalette &copy;NoraNeko</p>
+        </form>
+      </div>
+    </div>
+
+    <style>
+      img.sample {
+        border: 1px solid black;
+        margin-bottom: 5px;
+        display: block;
+      }
+
+      input {
+        width: fit-content;
+      }
+
+      #pageView {
+        margin: 0 !important;
+      }
+      div#appletdummy {
+        display: contents;
+      }
+
+      .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+        gap: 12px;
+      }
+
+      #appstage {
+        display: block;
+      }
+
+      #dyntools {
+        display: block;
+        text-align: center;
+      }
+      .palette_set {
+        max-height: 300px;
+        overflow-y: scroll;
+      }
+    </style>
+  </body>
+</html>
