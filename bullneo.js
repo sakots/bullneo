@@ -2,7 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.3";
+  const BULLNEO_VERSION = "0.1.4";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -1039,21 +1039,32 @@ a.${OPEN_BUTTON_CLASS} {
     };
   }
 
-  function buildAppletMarkup(width, height) {
+  function buildNeoMarkup(width, height) {
     const appletWidth = Math.max(width + 140, 520);
     const appletHeight = Math.max(height + 170, 540);
-    return `
-      <applet-dummy name="paintbbs" width="${appletWidth}" height="${appletHeight}">
-        <param name="image_width" value="${width}">
-        <param name="image_height" value="${height}">
-        <param name="image_bkcolor" value="${CANVAS_BACKGROUND_COLOR}">
-        <param name="neo_show_right_button" value="true">
-        <param name="neo_disable_grid_touch_move" value="true">
-        <param name="neo_enable_zoom_out" value="true">
-        <param name="neo_confirm_unload" value="true">
-        <param name="neo_disable_stabilizer" value="${state.stabilizerEnabled ? "false" : "true"}">
-      </applet-dummy>
-    `;
+    return `<div class="neo-applet-paintbbs" data-width="${appletWidth}" data-height="${appletHeight}"></div>`;
+  }
+
+  function configureNeoParams(width, height) {
+    const params =
+      window.Neo.params && typeof window.Neo.params === "object"
+        ? window.Neo.params
+        : window.Neo.param && typeof window.Neo.param === "object"
+          ? window.Neo.param
+          : {};
+
+    params.paintbbs = {
+      image_width: width,
+      image_height: height,
+      image_bkcolor: CANVAS_BACKGROUND_COLOR,
+      neo_show_right_button: true,
+      neo_disable_grid_touch_move: true,
+      neo_enable_zoom_out: true,
+      neo_confirm_unload: true,
+      neo_disable_stabilizer: !state.stabilizerEnabled,
+    };
+    window.Neo.param = params;
+    window.Neo.params = params;
   }
 
   async function renderEditor() {
@@ -1072,7 +1083,8 @@ a.${OPEN_BUTTON_CLASS} {
     mount.style.width = appletWidth + "px";
     mount.style.minHeight = appletHeight + "px";
 
-    mount.innerHTML = buildAppletMarkup(width, height);
+    mount.innerHTML = buildNeoMarkup(width, height);
+    configureNeoParams(width, height);
 
     const neoRoot = document.getElementById("NEO");
     if (neoRoot && neoRoot.parentNode && neoRoot.parentNode !== mount) {

@@ -75,6 +75,10 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 更新履歴
 
+### 2026/06/04 v0.1.4
+
+- NEO の `div.neo-applet-paintbbs` と `Neo.param.paintbbs` による新しい設定形式に対応
+
 ### 2026/05/09 v0.1.3
 
 - 手ブレ補正機能の誤字対応
