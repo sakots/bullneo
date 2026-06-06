@@ -2,7 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.4";
+  const BULLNEO_VERSION = "0.1.5";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -28,6 +28,7 @@
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
   const DEFAULT_PALETTE_PATH = "defaultPalette.txt";
   const CANVAS_BACKGROUND_COLOR = "#f0e0d6";
+  const CACHE_BUST_DATE = String(Date.now());
   const DEFAULT_PALETTE_TEXT = `!Palette
 #000000
 #ffffff
@@ -87,6 +88,12 @@
 
   function resolveAsset(path) {
     return new URL(path, state.baseUrl).href;
+  }
+
+  function addCacheBustDate(url) {
+    const parsed = new URL(url, location.href);
+    parsed.searchParams.set("date", CACHE_BUST_DATE);
+    return parsed.href;
   }
 
   function getScriptParam(name) {
@@ -910,8 +917,8 @@ a.${OPEN_BUTTON_CLASS} {
   }
 
   async function ensureAssets() {
-    loadStyleOnce(resolveAsset("neo/dist/neo.css"));
-    await loadScriptOnce(resolveAsset("neo/dist/neo.js"));
+    loadStyleOnce(addCacheBustDate(resolveAsset("neo/dist/neo.css")));
+    await loadScriptOnce(addCacheBustDate(resolveAsset("neo/dist/neo.js")));
     applyCanvasBackgroundPatch();
     state.neoReady = true;
   }
