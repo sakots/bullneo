@@ -73,6 +73,11 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 更新履歴
 
+### [2026/07/06] v0.1.6
+
+- 手振れ補正のデフォルト値を0にした
+- neoの新バージョンでもキャンバスの背景色をふたば基準にした
+
 ### [2026/06/07] v0.1.5
 
 - キャッシュを残りにくくした
