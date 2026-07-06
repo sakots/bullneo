@@ -1046,6 +1046,22 @@ a.${OPEN_BUTTON_CLASS} {
     };
   }
 
+  function applyCanvasBackgroundToPainter() {
+    const painter = window.Neo && window.Neo.painter;
+    if (!painter) return;
+
+    painter.backgroundColor = CANVAS_BACKGROUND_COLOR;
+    if (typeof painter.updateDestCanvas === "function") {
+      painter.updateDestCanvas(
+        0,
+        0,
+        painter.canvasWidth,
+        painter.canvasHeight,
+        false,
+      );
+    }
+  }
+
   function buildNeoMarkup(width, height) {
     const appletWidth = Math.max(width + 140, 520);
     const appletHeight = Math.max(height + 170, 540);
@@ -1105,6 +1121,7 @@ a.${OPEN_BUTTON_CLASS} {
     }
 
     window.Neo.start(false);
+    applyCanvasBackgroundToPainter();
     applyStabilizerSettings();
 
     const submitButton = document.getElementById("neo-submit");
