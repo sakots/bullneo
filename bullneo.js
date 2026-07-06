@@ -2,7 +2,7 @@
   "use strict";
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.5";
+  const BULLNEO_VERSION = "0.1.6";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
