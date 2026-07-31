@@ -1,6 +1,6 @@
 # BULLNEO
 
-BULLNEO（ぶるねお）は、ふたばちゃんねるの投稿フォームに `neo/dist/neo.js` を後付けで読み込み、描いた内容を PNG として添付欄へ戻すためのスクリプトです。
+BULLNEO（ぶるねお）は、ふたばちゃんねるの投稿フォームに PaintBBS NEO を後付けで読み込み、描いた内容を PNG として添付欄へ戻すためのスクリプトです。
 
 ## 使い方
 
@@ -21,15 +21,11 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
 ```
 
-`bullneo.js` は同じ場所から相対パスで `neo/dist/neo.js` と `neo/dist/neo.css` を読むので、次のように配置してください。
+PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
+読み込み元を変更する場合は、`bullneo.js` を読み込む前に `window.BULLNEO_NEO_BASE` を設定してください。
 
-```text
-/
-  bullneo.js
-  neo/
-    dist/
-      neo.js
-      neo.css
+```javascript
+window.BULLNEO_NEO_BASE = "https://example.com/path/to/neo/";
 ```
 
 ブックマークレットを実行すると、そのまま NEO の編集画面を開きつつ、投稿フォームの近くに `手書き(NEO)` リンクも追加します。`画像に反映` を押すと描いた絵が PNG になって添付ファイル欄へ入るので、そのまま通常どおり投稿できます。
@@ -72,6 +68,10 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 ```
 
 ## 更新履歴
+
+### [2026/07/31] v0.1.7
+
+- neoのURL修正
 
 ### [2026/07/06] v0.1.6
 

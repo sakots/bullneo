@@ -112,8 +112,9 @@
       <h1>BULLNEO ローカル確認</h1>
       <p>
         このページは <code>bullneo.js</code> の動作確認用です。ブラウザで
-        <code>test/index.html</code> を開いて、投稿フォーム横の
-        <code>手書き(NEO)</code> から操作してください。
+        <code>bullneoTest/index.html</code> を開いて、投稿フォーム横の
+        <code>手書き(NEO)</code> から操作してください。PaintBBS NEO は
+        <code>window.BULLNEO_NEO_BASE</code> で指定したURLから読み込みます。
       </p>
 
       <section class="panel">
@@ -190,6 +191,9 @@
         });
         syncState();
       })();
+    </script>
+    <script>
+      window.BULLNEO_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
     </script>
     <script src="../bullneo.js"></script>
   </body>

@@ -3,6 +3,7 @@
 
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
   const BULLNEO_VERSION = "0.1.6";
+  const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -62,6 +63,7 @@
 
   const state = {
     baseUrl: detectBaseUrl(),
+    neoBaseUrl: detectNeoBaseUrl(),
     targetForm: null,
     neoReady: false,
     mounted: false,
@@ -88,6 +90,17 @@
 
   function resolveAsset(path) {
     return new URL(path, state.baseUrl).href;
+  }
+
+  function detectNeoBaseUrl() {
+    return new URL(
+      window.BULLNEO_NEO_BASE || DEFAULT_NEO_BASE,
+      detectBaseUrl(),
+    ).href;
+  }
+
+  function resolveNeoAsset(path) {
+    return new URL(path, state.neoBaseUrl).href;
   }
 
   function addCacheBustDate(url) {
@@ -917,8 +930,8 @@ a.${OPEN_BUTTON_CLASS} {
   }
 
   async function ensureAssets() {
-    loadStyleOnce(addCacheBustDate(resolveAsset("neo/dist/neo.css")));
-    await loadScriptOnce(addCacheBustDate(resolveAsset("neo/dist/neo.js")));
+    loadStyleOnce(addCacheBustDate(resolveNeoAsset("neo.css")));
+    await loadScriptOnce(addCacheBustDate(resolveNeoAsset("neo.js")));
     applyCanvasBackgroundPatch();
     state.neoReady = true;
   }
