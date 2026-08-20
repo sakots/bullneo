@@ -9,7 +9,8 @@
   "use strict";
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
   const BULLNEO_VERSION = "0.1.7";
-  const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
+  const DEFAULT_NEO_BASE =
+    "https://raw.githubusercontent.com/funige/neo/master/dist/";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";

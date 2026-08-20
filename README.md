@@ -10,7 +10,7 @@ chromeなら、ブックマークバーに「ページを追加」で、URLを�
 お絵かきレス画面を表示してブックマークレットを起動してください
 
 ```javascript
-javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://neo.sakots.net/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
+javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://raw.githubusercontent.com/sakots/bullneo/main/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
 ```
 
 ## 開発
@@ -30,7 +30,7 @@ npm run validate
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
 ```
 
-PaintBBS NEO は、デフォルトで `https://oekakibbs.moe/apps/neo/` から読み込みます。
+PaintBBS NEO は、デフォルトで `https://raw.githubusercontent.com/funige/neo/master/dist/` から読み込みます。
 読み込み元を変更する場合は、`bullneo.js` を読み込む前に `window.BULLNEO_NEO_BASE` を設定してください。
 
 ```javascript
@@ -48,7 +48,7 @@ window.BULLNEO_NEO_BASE = "https://example.com/path/to/neo/";
 外部テキストのパレットマトリクスを読み込む場合は、ブックマークレットの `bullneo.js` の URL に `bullneo_palette` を追加してください。省略した場合は、`bullneo.js` 内蔵のデフォルトパレットを使います。
 
 ```javascript
-javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_palette=palette.txt&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
+javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://raw.githubusercontent.com/sakots/bullneo/main/bullneo.js?bullneo_palette=palette.txt&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
 ```
 
 `palette.txt` は `bullneo.js` からの相対パス、または絶対 URL を指定できます。
@@ -77,6 +77,11 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 ```
 
 ## 更新履歴
+
+### [2026/08/20] v0.2.0
+
+- typescriptに
+- neoを直接GitHubから取得するように変更
 
 ### [2026/07/31] v0.1.7
 
