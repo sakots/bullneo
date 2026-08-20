@@ -1,8 +1,14 @@
+/**
+ * BULLNEO browser entry point.
+ *
+ * This remains an IIFE because it is loaded as a classic bookmarklet script.
+ * Keep browser integration points on `window` rather than introducing module
+ * imports, which would change how the production script is consumed.
+ */
 (() => {
   "use strict";
-
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.6";
+  const BULLNEO_VERSION = "0.1.7";
   const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
@@ -48,19 +54,18 @@
 !Matrix`;
   const DEBUG = (() => {
     const currentScript = document.currentScript;
-    const scriptSrc = currentScript && currentScript.src ? currentScript.src : "";
+    const scriptSrc =
+      currentScript && currentScript.src ? currentScript.src : "";
     return (
       /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(location.search) ||
       /[?&]bullneo_debug(?:=1)?(?:&|$)/.test(scriptSrc)
     );
   })();
-
   const existing = window.BullNeo;
   if (existing && typeof existing.install === "function") {
     existing.install();
     return;
   }
-
   const state = {
     baseUrl: detectBaseUrl(),
     neoBaseUrl: detectNeoBaseUrl(),
@@ -74,7 +79,6 @@
     stabilizerEnabled: false,
     stabilizerLevel: 0,
   };
-
   function detectBaseUrl() {
     const currentScript = document.currentScript;
     if (currentScript && currentScript.src) {
@@ -87,31 +91,25 @@
       "bullneo.js \u306e\u914d\u7f6eURL\u3092\u7279\u5b9a\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
     );
   }
-
   function resolveAsset(path) {
     return new URL(path, state.baseUrl).href;
   }
-
   function detectNeoBaseUrl() {
-    return new URL(
-      window.BULLNEO_NEO_BASE || DEFAULT_NEO_BASE,
-      detectBaseUrl(),
-    ).href;
+    return new URL(window.BULLNEO_NEO_BASE || DEFAULT_NEO_BASE, detectBaseUrl())
+      .href;
   }
-
   function resolveNeoAsset(path) {
     return new URL(path, state.neoBaseUrl).href;
   }
-
   function addCacheBustDate(url) {
     const parsed = new URL(url, location.href);
     parsed.searchParams.set("date", CACHE_BUST_DATE);
     return parsed.href;
   }
-
   function getScriptParam(name) {
     const currentScript = document.currentScript;
-    const scriptSrc = currentScript && currentScript.src ? currentScript.src : "";
+    const scriptSrc =
+      currentScript && currentScript.src ? currentScript.src : "";
     if (!scriptSrc) return "";
     try {
       return new URL(scriptSrc).searchParams.get(name) || "";
@@ -119,7 +117,6 @@
       return "";
     }
   }
-
   function detectPaletteUrl() {
     const configured =
       window.BULLNEO_PALETTE_URL ||
@@ -127,11 +124,8 @@
       DEFAULT_PALETTE_PATH;
     return new URL(configured, detectBaseUrl()).href;
   }
-
   function loadScriptOnce(src) {
-    const found = document.querySelector(
-      `script[${ASSET_MARKER}="${src}"]`,
-    );
+    const found = document.querySelector(`script[${ASSET_MARKER}="${src}"]`);
     if (found) {
       if (found.dataset.loaded === "true") return Promise.resolve();
       return new Promise((resolve, reject) => {
@@ -141,7 +135,6 @@
         });
       });
     }
-
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src;
@@ -171,7 +164,6 @@
       document.head.appendChild(script);
     });
   }
-
   function loadStyleOnce(href) {
     if (document.querySelector(`link[${ASSET_MARKER}="${href}"]`)) return;
     const link = document.createElement("link");
@@ -180,7 +172,6 @@
     link.setAttribute(ASSET_MARKER, href);
     document.head.appendChild(link);
   }
-
   function ensureInlineStyle() {
     if (document.getElementById(INLINE_STYLE_ID)) return;
     const style = document.createElement("style");
@@ -298,15 +289,12 @@ a.${OPEN_BUTTON_CLASS} {
 `;
     document.head.appendChild(style);
   }
-
   function getAccessibleDocuments() {
     const docs = [];
     const visited = new Set();
-
     function visit(win) {
       if (!win || visited.has(win)) return;
       visited.add(win);
-
       let doc = null;
       try {
         doc = win.document;
@@ -315,7 +303,6 @@ a.${OPEN_BUTTON_CLASS} {
       }
       if (!doc) return;
       docs.push(doc);
-
       let frames = null;
       try {
         frames = win.frames;
@@ -323,22 +310,18 @@ a.${OPEN_BUTTON_CLASS} {
         frames = null;
       }
       if (!frames) return;
-
       for (let i = 0; i < frames.length; i += 1) {
         visit(frames[i]);
       }
     }
-
     try {
       visit(window.top);
     } catch (_error) {
       visit(window);
     }
     visit(window);
-
     return docs;
   }
-
   function isInsideBullneo(node) {
     return Boolean(
       node &&
@@ -346,11 +329,11 @@ a.${OPEN_BUTTON_CLASS} {
         (node.closest("#" + MODAL_ID) || node.closest("#" + PANEL_ID)),
     );
   }
-
   function findTargetFormInDocument(doc) {
-    const activeForm = doc.activeElement && doc.activeElement.closest
-      ? doc.activeElement.closest("form")
-      : null;
+    const activeForm =
+      doc.activeElement && doc.activeElement.closest
+        ? doc.activeElement.closest("form")
+        : null;
     if (
       activeForm &&
       !isInsideBullneo(activeForm) &&
@@ -358,23 +341,18 @@ a.${OPEN_BUTTON_CLASS} {
     ) {
       return activeForm;
     }
-
     const forms = Array.from(doc.forms || []).filter(
       (form) =>
         !isInsideBullneo(form) && form.querySelector(FILE_INPUT_SELECTOR),
     );
-
     return (
-      forms.find((form) => form.querySelector("textarea")) ||
-      forms[0] ||
-      null
+      forms.find((form) => form.querySelector("textarea")) || forms[0] || null
     );
   }
-
   function findPseudoFormInDocument(doc) {
-    const fileInputs = Array.from(doc.querySelectorAll(FILE_INPUT_SELECTOR)).filter(
-      (input) => !isInsideBullneo(input),
-    );
+    const fileInputs = Array.from(
+      doc.querySelectorAll(FILE_INPUT_SELECTOR),
+    ).filter((input) => !isInsideBullneo(input));
     for (const input of fileInputs) {
       const container =
         input.closest("form") ||
@@ -385,7 +363,6 @@ a.${OPEN_BUTTON_CLASS} {
         return container;
       }
     }
-
     const replyTextarea = doc.getElementById(REPLY_TEXTAREA_ID);
     if (replyTextarea) {
       return (
@@ -397,7 +374,6 @@ a.${OPEN_BUTTON_CLASS} {
     }
     return null;
   }
-
   function findTargetForm() {
     const docs = getAccessibleDocuments();
     for (const doc of docs) {
@@ -408,7 +384,6 @@ a.${OPEN_BUTTON_CLASS} {
     }
     return null;
   }
-
   function findFileInput(form) {
     if (!form) return null;
     if (isInsideBullneo(form)) return null;
@@ -424,7 +399,9 @@ a.${OPEN_BUTTON_CLASS} {
           replyTextarea.parentElement);
       if (
         replyContainer &&
-        (replyContainer === form || replyContainer.contains(form) || form.contains(replyContainer))
+        (replyContainer === form ||
+          replyContainer.contains(form) ||
+          form.contains(replyContainer))
       ) {
         inputs = Array.from(doc.querySelectorAll(FILE_INPUT_SELECTOR));
       }
@@ -437,7 +414,6 @@ a.${OPEN_BUTTON_CLASS} {
       null
     );
   }
-
   function findImageNoneCheckbox(form) {
     if (!form) return null;
     const candidates = Array.from(
@@ -451,29 +427,23 @@ a.${OPEN_BUTTON_CLASS} {
       null
     );
   }
-
   function getWidthInput() {
     return document.getElementById(WIDTH_ID);
   }
-
   function getHeightInput() {
     return document.getElementById(HEIGHT_ID);
   }
-
   function getRequestedCanvasSize() {
     const width = clampNumber(getWidthInput()?.value, 100, 2000, 400);
     const height = clampNumber(getHeightInput()?.value, 100, 2000, 400);
     return { width, height };
   }
-
   function getStabilizerEnabledInput() {
     return document.getElementById(STABILIZER_ENABLED_ID);
   }
-
   function getStabilizerLevelInput() {
     return document.getElementById(STABILIZER_LEVEL_ID);
   }
-
   function syncStabilizerStateFromInputs() {
     const enabledInput = getStabilizerEnabledInput();
     const levelInput = getStabilizerLevelInput();
@@ -484,7 +454,6 @@ a.${OPEN_BUTTON_CLASS} {
       state.stabilizerLevel = clampNumber(levelInput.value, 0, 5, 1);
     }
   }
-
   function syncStabilizerInputs() {
     const enabledInput = getStabilizerEnabledInput();
     const levelInput = getStabilizerLevelInput();
@@ -496,33 +465,27 @@ a.${OPEN_BUTTON_CLASS} {
       levelInput.disabled = !state.stabilizerEnabled;
     }
   }
-
   function applyStabilizerSettings() {
     syncStabilizerStateFromInputs();
     if (!window.Neo) return;
-
     if (!window.Neo.config) {
       window.Neo.config = {};
     }
     window.Neo.config.neo_disable_stabilizer = state.stabilizerEnabled
       ? "false"
       : "true";
-
     if (typeof window.Neo.setStabilizeLevel === "function") {
       window.Neo.setStabilizeLevel(state.stabilizerLevel);
     } else {
       window.Neo.stabilize_level = state.stabilizerLevel;
     }
-
     syncStabilizerInputs();
   }
-
   function clampNumber(value, min, max, fallback) {
-    const num = parseInt(value, 10);
+    const num = parseInt(String(value || ""), 10);
     if (Number.isNaN(num)) return fallback;
     return Math.max(min, Math.min(max, num));
   }
-
   function parsePaletteText(text) {
     const lines = String(text || "")
       .replace(/\r\n?/g, "\n")
@@ -532,7 +495,6 @@ a.${OPEN_BUTTON_CLASS} {
     const palettes = [];
     let currentName = "";
     let currentColors = [];
-
     function pushPalette() {
       if (!currentColors.length) return;
       const colors = currentColors.filter((line) =>
@@ -540,12 +502,12 @@ a.${OPEN_BUTTON_CLASS} {
       );
       if (colors.length >= 14) {
         palettes.push({
-          name: currentName || "\u30d1\u30ec\u30c3\u30c8 " + (palettes.length + 1),
+          name:
+            currentName || "\u30d1\u30ec\u30c3\u30c8 " + (palettes.length + 1),
           colors: colors.slice(0, 14),
         });
       }
     }
-
     for (const line of lines) {
       if (line.startsWith("!")) {
         pushPalette();
@@ -561,7 +523,6 @@ a.${OPEN_BUTTON_CLASS} {
       }
     }
     pushPalette();
-
     if (!palettes.length) {
       const colors = lines.filter((line) => /^#[0-9a-fA-F]{6}$/.test(line));
       if (colors.length >= 14) {
@@ -571,14 +532,11 @@ a.${OPEN_BUTTON_CLASS} {
         });
       }
     }
-
     return palettes;
   }
-
   async function loadPalettes(options = {}) {
     if (!state.paletteUrl) return [];
     if (state.paletteLoaded && !options.force) return state.palettes;
-
     const defaultPaletteUrl = new URL(DEFAULT_PALETTE_PATH, state.baseUrl).href;
     let text = DEFAULT_PALETTE_TEXT;
     if (state.paletteUrl !== defaultPaletteUrl) {
@@ -591,31 +549,26 @@ a.${OPEN_BUTTON_CLASS} {
       }
       text = await response.text();
     }
-
     const palettes = parsePaletteText(text);
     if (!palettes.length) {
       throw new Error(
         "\u6709\u52b9\u306a14\u8272\u30d1\u30ec\u30c3\u30c8\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
       );
     }
-
     state.palettes = palettes;
     state.paletteLoaded = true;
     updatePaletteSelect();
     return palettes;
   }
-
   function getPaletteSelect() {
     return document.getElementById(PALETTE_SELECT_ID);
   }
-
   function updatePaletteSelect() {
     const select = getPaletteSelect();
     const controls = document.querySelector(
       '[data-bullneo-palette-controls="true"]',
     );
     if (!select || !controls) return;
-
     select.textContent = "";
     state.palettes.forEach((palette, index) => {
       const option = document.createElement("option");
@@ -626,13 +579,11 @@ a.${OPEN_BUTTON_CLASS} {
       option.style.color = getReadableTextColor(swatch);
       select.appendChild(option);
     });
-
     controls.classList.toggle(
       "is-ready",
       Boolean(state.paletteUrl && state.palettes.length),
     );
   }
-
   function getReadableTextColor(color) {
     const match = /^#?([0-9a-fA-F]{6})$/.exec(color || "");
     if (!match) return "#000000";
@@ -642,15 +593,12 @@ a.${OPEN_BUTTON_CLASS} {
     const b = parseInt(hex.slice(4, 6), 16);
     return Math.max(r, g, b) < 128 ? "#ffffff" : "#000000";
   }
-
   async function applySelectedPalette() {
     if (!window.Neo || typeof window.Neo.setColors !== "function") return;
     const select = getPaletteSelect();
     if (!select || select.selectedIndex < 0) return;
-
     const palette = state.palettes[Number(select.value)];
     if (!palette) return;
-
     window.Neo.setColors(palette.colors.join("\n"));
     setStatus(
       "\u30d1\u30ec\u30c3\u30c8\u300c" +
@@ -658,11 +606,9 @@ a.${OPEN_BUTTON_CLASS} {
         "\u300d\u3092\u9069\u7528\u3057\u307e\u3057\u305f\u3002",
     );
   }
-
   function ensureModal() {
     let modal = document.getElementById(MODAL_ID);
     if (modal) return modal;
-
     modal = document.createElement("div");
     modal.id = MODAL_ID;
     modal.innerHTML = `
@@ -698,15 +644,12 @@ a.${OPEN_BUTTON_CLASS} {
         <div id="${MOUNT_ID}"></div>
       </div>
     `;
-
     modal.addEventListener("click", (event) => {
       if (event.target === modal) close();
     });
-
     modal
       .querySelector('[data-bullneo-close="true"]')
       .addEventListener("click", close);
-
     modal
       .querySelector('[data-bullneo-action="rerender"]')
       .addEventListener("click", () => {
@@ -714,18 +657,18 @@ a.${OPEN_BUTTON_CLASS} {
           setStatus(error.message, true);
         });
       });
-
-    modal.querySelector(`#${RESET_SIZE_ID}`).addEventListener("click", (event) => {
-      event.preventDefault();
-      const widthInput = getWidthInput();
-      const heightInput = getHeightInput();
-      if (widthInput) widthInput.value = "344";
-      if (heightInput) heightInput.value = "135";
-      renderEditor().catch((error) => {
-        setStatus(error.message, true);
+    modal
+      .querySelector(`#${RESET_SIZE_ID}`)
+      .addEventListener("click", (event) => {
+        event.preventDefault();
+        const widthInput = getWidthInput();
+        const heightInput = getHeightInput();
+        if (widthInput) widthInput.value = "344";
+        if (heightInput) heightInput.value = "135";
+        renderEditor().catch((error) => {
+          setStatus(error.message, true);
+        });
       });
-    });
-
     modal
       .querySelector('[data-bullneo-action="apply"]')
       .addEventListener("click", () => {
@@ -733,7 +676,6 @@ a.${OPEN_BUTTON_CLASS} {
           setStatus(error.message, true);
         });
       });
-
     modal
       .querySelector('[data-bullneo-action="clear"]')
       .addEventListener("click", () => {
@@ -743,22 +685,21 @@ a.${OPEN_BUTTON_CLASS} {
           "\u30ad\u30e3\u30f3\u30d0\u30b9\u3092\u30af\u30ea\u30a2\u3057\u307e\u3057\u305f\u3002",
         );
       });
-
     const paletteSelect = modal.querySelector(`#${PALETTE_SELECT_ID}`);
     paletteSelect.addEventListener("change", () => {
       applySelectedPalette().catch((error) => {
         setStatus(error.message, true);
       });
     });
-
-    modal.querySelector(`#${PALETTE_RELOAD_ID}`).addEventListener("click", () => {
-      loadPalettes({ force: true })
-        .then(() => applySelectedPalette())
-        .catch((error) => {
-          setStatus(error.message, true);
-        });
-    });
-
+    modal
+      .querySelector(`#${PALETTE_RELOAD_ID}`)
+      .addEventListener("click", () => {
+        loadPalettes({ force: true })
+          .then(() => applySelectedPalette())
+          .catch((error) => {
+            setStatus(error.message, true);
+          });
+      });
     const stabilizerEnabled = modal.querySelector(`#${STABILIZER_ENABLED_ID}`);
     const stabilizerLevel = modal.querySelector(`#${STABILIZER_LEVEL_ID}`);
     stabilizerEnabled.addEventListener("change", () => {
@@ -778,18 +719,19 @@ a.${OPEN_BUTTON_CLASS} {
       );
     });
     syncStabilizerInputs();
-
     document.body.appendChild(modal);
     return modal;
   }
-
   function ensureOpenButton(form) {
-    if (!form || isInsideBullneo(form) || form.querySelector(`.${OPEN_BUTTON_CLASS}`)) {
+    if (
+      !form ||
+      isInsideBullneo(form) ||
+      form.querySelector(`.${OPEN_BUTTON_CLASS}`)
+    ) {
       return;
     }
     const fileInput = findFileInput(form);
     if (!fileInput) return;
-
     const link = document.createElement("a");
     link.href = "#";
     link.className = OPEN_BUTTON_CLASS;
@@ -801,21 +743,17 @@ a.${OPEN_BUTTON_CLASS} {
         setStatus(error.message, true);
       });
     });
-
     const imageNone = findImageNoneCheckbox(form);
-    if (imageNone && imageNone.parentNode) {
-      imageNone.parentNode.insertAdjacentElement("afterend", link);
+    if (imageNone && imageNone.parentElement) {
+      imageNone.parentElement.insertAdjacentElement("afterend", link);
       return;
     }
-
     fileInput.insertAdjacentElement("afterend", link);
   }
-
   function ensureOpenButtonInOebtnd(doc) {
     if (!doc || !doc.getElementById) return;
     const mount = doc.getElementById(OE_BUTTON_ID);
     if (!mount || doc.getElementById(START_LINK_ID)) return;
-
     const wrapper = mount.parentNode.insertBefore(
       doc.createElement("div"),
       mount.nextSibling,
@@ -832,20 +770,18 @@ a.${OPEN_BUTTON_CLASS} {
         setStatus(error.message, true);
       });
     });
-
     link.style.fontSize = "x-small";
     wrapper.appendChild(link);
     debugLog("inserted launcher into #" + OE_BUTTON_ID);
   }
-
   function installLinks(root = document) {
-    if (root.nodeType === 9) {
+    if (root.nodeType === Node.DOCUMENT_NODE) {
       ensureOpenButtonInOebtnd(root);
     }
     let forms = Array.from(root.querySelectorAll(FORM_SELECTOR)).filter(
       (form) => !isInsideBullneo(form) && findFileInput(form),
     );
-    if (forms.length === 0 && root.nodeType === 9) {
+    if (forms.length === 0 && root.nodeType === Node.DOCUMENT_NODE) {
       const pseudoForm = findPseudoFormInDocument(root);
       if (pseudoForm) forms = [pseudoForm];
     }
@@ -855,20 +791,21 @@ a.${OPEN_BUTTON_CLASS} {
       state.targetForm = findTargetForm();
     }
   }
-
   function observeForms(targetDocument) {
     if (
       state.observers.some((entry) => entry.targetDocument === targetDocument)
     ) {
       return;
     }
-
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
+        for (const node of Array.from(mutation.addedNodes)) {
           if (!(node instanceof Element)) continue;
           if (isInsideBullneo(node)) continue;
-          if (node.matches?.(FORM_SELECTOR) || node.querySelector?.(FORM_SELECTOR)) {
+          if (
+            node.matches?.(FORM_SELECTOR) ||
+            node.querySelector?.(FORM_SELECTOR)
+          ) {
             installLinks(targetDocument);
           }
           if (
@@ -883,7 +820,6 @@ a.${OPEN_BUTTON_CLASS} {
         }
       }
     });
-
     if (!targetDocument.body) return;
     observer.observe(targetDocument.body, {
       childList: true,
@@ -891,19 +827,16 @@ a.${OPEN_BUTTON_CLASS} {
     });
     state.observers.push({ targetDocument, observer });
   }
-
-  function setStatus(message, isError) {
+  function setStatus(message, isError = false) {
     const status = document.getElementById(STATUS_ID);
     if (!status) return;
     status.textContent = message || "";
     status.style.color = isError ? "#a12727" : "#5e4a2f";
   }
-
   function debugLog(message) {
     if (!DEBUG) return;
     console.log("[BULLNEO]", message);
   }
-
   function debugDocumentSummary(doc, index) {
     if (!DEBUG) return;
     let href = "";
@@ -928,14 +861,12 @@ a.${OPEN_BUTTON_CLASS} {
         textareas,
     );
   }
-
   async function ensureAssets() {
     loadStyleOnce(addCacheBustDate(resolveNeoAsset("neo.css")));
     await loadScriptOnce(addCacheBustDate(resolveNeoAsset("neo.js")));
     applyCanvasBackgroundPatch();
     state.neoReady = true;
   }
-
   function applyCanvasBackgroundPatch() {
     if (
       !window.Neo ||
@@ -944,17 +875,14 @@ a.${OPEN_BUTTON_CLASS} {
     ) {
       return;
     }
-
     const proto = window.Neo.Painter.prototype;
     proto.backgroundColor = CANVAS_BACKGROUND_COLOR;
     proto.__bullneoBackgroundPatched = true;
-
     proto.getImage = function (imageWidth, imageHeight) {
       const width = this.canvasWidth;
       const height = this.canvasHeight;
       imageWidth = imageWidth || width;
       imageHeight = imageHeight || height;
-
       const pngCanvas = document.createElement("canvas");
       pngCanvas.width = imageWidth;
       pngCanvas.height = imageHeight;
@@ -963,7 +891,6 @@ a.${OPEN_BUTTON_CLASS} {
       });
       pngCanvasCtx.fillStyle = this.backgroundColor || CANVAS_BACKGROUND_COLOR;
       pngCanvasCtx.fillRect(0, 0, imageWidth, imageHeight);
-
       if (this.visible[0]) {
         pngCanvasCtx.drawImage(
           this.canvas[0],
@@ -992,11 +919,9 @@ a.${OPEN_BUTTON_CLASS} {
       }
       return pngCanvas;
     };
-
     proto.updateDestCanvas = function (x, y, width, height, useTemp) {
       x = Math.floor(x);
       y = Math.floor(y);
-
       const canvasWidth = this.canvasWidth;
       const canvasHeight = this.canvasHeight;
       const updateAll =
@@ -1006,12 +931,10 @@ a.${OPEN_BUTTON_CLASS} {
       if (x < 0) x = 0;
       if (y < 0) y = 0;
       if (width <= 0 || height <= 0) return;
-
       const ctx = this.destCanvasCtx;
       ctx.save();
       ctx.fillStyle = this.backgroundColor || CANVAS_BACKGROUND_COLOR;
       ctx.globalAlpha = 1.0;
-
       const zoom = this.zoom;
       this.scrollBarX = isNaN(this.scrollBarX) ? 0 : this.scrollBarX;
       this.scrollBarY = isNaN(this.scrollBarY) ? 0 : this.scrollBarY;
@@ -1019,27 +942,23 @@ a.${OPEN_BUTTON_CLASS} {
         this.scrollBarX * (this.canvasWidth * zoom - this.destCanvas.width);
       const offsetY =
         this.scrollBarY * (this.canvasHeight * zoom - this.destCanvas.height);
-
       const zx = Math.round(x * zoom - offsetX);
       const zy = Math.round(y * zoom - offsetY);
       const zx2 = Math.round((x + width) * zoom - offsetX);
       const zy2 = Math.round((y + height) * zoom - offsetY);
       const zw = zx2 - zx;
       const zh = zy2 - zy;
-
       if (updateAll) {
         ctx.fillRect(0, 0, this.destCanvas.width, this.destCanvas.height);
       } else {
         ctx.fillRect(zx, zy, zw, zh);
       }
-
       if (this.visible[0]) {
         ctx.drawImage(this.canvas[0], x, y, width, height, zx, zy, zw, zh);
       }
       if (this.visible[1]) {
         ctx.drawImage(this.canvas[1], x, y, width, height, zx, zy, zw, zh);
       }
-
       if (useTemp) {
         const tempX = Math.floor(this.tempX * zoom);
         const tempY = Math.floor(this.tempY * zoom);
@@ -1058,11 +977,9 @@ a.${OPEN_BUTTON_CLASS} {
       ctx.restore();
     };
   }
-
   function applyCanvasBackgroundToPainter() {
     const painter = window.Neo && window.Neo.painter;
     if (!painter) return;
-
     painter.backgroundColor = CANVAS_BACKGROUND_COLOR;
     if (typeof painter.updateDestCanvas === "function") {
       painter.updateDestCanvas(
@@ -1074,13 +991,11 @@ a.${OPEN_BUTTON_CLASS} {
       );
     }
   }
-
   function buildNeoMarkup(width, height) {
     const appletWidth = Math.max(width + 140, 520);
     const appletHeight = Math.max(height + 170, 540);
     return `<div class="neo-applet-paintbbs" data-width="${appletWidth}" data-height="${appletHeight}"></div>`;
   }
-
   function configureNeoParams(width, height) {
     const params =
       window.Neo.params && typeof window.Neo.params === "object"
@@ -1088,7 +1003,6 @@ a.${OPEN_BUTTON_CLASS} {
         : window.Neo.param && typeof window.Neo.param === "object"
           ? window.Neo.param
           : {};
-
     params.paintbbs = {
       image_width: width,
       image_height: height,
@@ -1102,7 +1016,6 @@ a.${OPEN_BUTTON_CLASS} {
     window.Neo.param = params;
     window.Neo.params = params;
   }
-
   async function renderEditor() {
     await ensureAssets();
     const modal = ensureModal();
@@ -1112,31 +1025,26 @@ a.${OPEN_BUTTON_CLASS} {
     const { width, height } = getRequestedCanvasSize();
     const appletWidth = Math.max(width + 140, 520);
     const appletHeight = Math.max(height + 170, 540);
-
     if (panel) {
-      panel.style.width = Math.min(appletWidth + 32, window.innerWidth * 0.92) + "px";
+      panel.style.width =
+        Math.min(appletWidth + 32, window.innerWidth * 0.92) + "px";
     }
     mount.style.width = appletWidth + "px";
     mount.style.minHeight = appletHeight + "px";
-
     mount.innerHTML = buildNeoMarkup(width, height);
     configureNeoParams(width, height);
-
     const neoRoot = document.getElementById("NEO");
     if (neoRoot && neoRoot.parentNode && neoRoot.parentNode !== mount) {
       neoRoot.parentNode.removeChild(neoRoot);
     }
-
     if (!window.Neo || !window.Neo.init()) {
       throw new Error(
         "PaintBBS NEO \u306e\u521d\u671f\u5316\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002",
       );
     }
-
     window.Neo.start(false);
     applyCanvasBackgroundToPainter();
     applyStabilizerSettings();
-
     const submitButton = document.getElementById("neo-submit");
     if (submitButton) {
       submitButton.textContent = "\u753b\u50cf\u306b\u53cd\u6620";
@@ -1146,7 +1054,6 @@ a.${OPEN_BUTTON_CLASS} {
         });
       };
     }
-
     let paletteError = "";
     if (state.paletteUrl) {
       try {
@@ -1156,7 +1063,6 @@ a.${OPEN_BUTTON_CLASS} {
         paletteError = error.message;
       }
     }
-
     setStatus(
       paletteError ||
         "\u63cf\u304d\u7d42\u308f\u3063\u305f\u3089\u300c\u753b\u50cf\u306b\u53cd\u6620\u300d\u3067\u3075\u305f\u3070\u306e\u624b\u66f8\u304djs\u9818\u57df\u3078\u623b\u3057\u307e\u3059\u3002",
@@ -1164,7 +1070,6 @@ a.${OPEN_BUTTON_CLASS} {
     );
     state.mounted = true;
   }
-
   function updateThumbnail(dataURL) {
     const anchor = document.getElementById(START_LINK_ID);
     if (!anchor) return;
@@ -1177,34 +1082,28 @@ a.${OPEN_BUTTON_CLASS} {
     }
     thumb.src = dataURL;
   }
-
   function clearFutabaTargets() {
     const baseform = document.getElementById(IMAGE_DATA_URL_ID);
     if (baseform) {
       baseform.removeAttribute("value");
     }
-
     const thumb = document.getElementById(THUMBNAIL_ID);
     if (thumb && thumb.parentNode && thumb.parentNode.parentNode) {
       thumb.parentNode.parentNode.removeChild(thumb.parentNode);
     }
   }
-
   async function applyImageToFutaba() {
     if (!window.Neo || !window.Neo.painter) {
       throw new Error(
         "NEO \u306e\u30ad\u30e3\u30f3\u30d0\u30b9\u304c\u307e\u3060\u6e96\u5099\u3067\u304d\u3066\u3044\u307e\u305b\u3093\u3002",
       );
     }
-
     const canvas = window.Neo.painter.getImage();
     const dataURL = canvas.toDataURL("image/png");
-
     const baseform = document.getElementById(IMAGE_DATA_URL_ID);
     if (baseform) {
       baseform.setAttribute("value", dataURL.replace(/^[^,]+,/, ""));
     }
-
     const oejs = document.getElementById(OEJS_ID);
     if (oejs && oejs.getContext) {
       const image = canvas
@@ -1214,14 +1113,12 @@ a.${OPEN_BUTTON_CLASS} {
       oejs.height = canvas.height;
       oejs.getContext("2d").putImageData(image, 0, 0);
     }
-
     updateThumbnail(dataURL);
     setStatus(
       "\u753b\u50cf\u3092\u3075\u305f\u3070\u306e\u624b\u66f8\u304djs\u5411\u3051\u30d5\u30a3\u30fc\u30eb\u30c9\u306b\u53cd\u6620\u3057\u307e\u3057\u305f\u3002",
     );
     close();
   }
-
   async function open() {
     ensureInlineStyle();
     const modal = ensureModal();
@@ -1235,19 +1132,16 @@ a.${OPEN_BUTTON_CLASS} {
         false,
       );
     }
-
     if (!state.mounted) {
       await renderEditor();
     }
   }
-
   function close() {
     const modal = document.getElementById(MODAL_ID);
     if (modal) {
       modal.classList.remove("is-open");
     }
   }
-
   function boot() {
     ensureInlineStyle();
     state.targetForm = findTargetForm();
@@ -1278,12 +1172,10 @@ a.${OPEN_BUTTON_CLASS} {
     } else {
       debugLog("target form detected");
     }
-
     open().catch((error) => {
       setStatus(error.message, true);
     });
   }
-
   window.BullNeo = {
     install: boot,
     version: BULLNEO_VERSION,
@@ -1295,6 +1187,5 @@ a.${OPEN_BUTTON_CLASS} {
     loadPalettes,
     applySelectedPalette,
   };
-
   boot();
 })();

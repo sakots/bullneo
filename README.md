@@ -15,7 +15,16 @@ javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF
 
 ## 開発
 
-`bullneo.js` を HTTP(S) で置いて、`can.php` と同じ流儀のブックマークレットから読み込みます。`example.com` は実際に配置したホスト名へ置き換えてください。
+実装の正本は `src/bullneo.ts` です。配布用の `bullneo.js` は、ブックマークレットの読み込み互換性のためコミットされた生成物として残します。
+
+```bash
+npm install
+npm run validate
+```
+
+`npm run validate` は TypeScript から `bullneo.js` を生成し、生成結果の JavaScript 構文を検証します。型だけを検査する場合は `npm run typecheck` を使用します。
+
+生成された `bullneo.js` を HTTP(S) で置いて、`can.php` と同じ流儀のブックマークレットから読み込みます。`example.com` は実際に配置したホスト名へ置き換えてください。
 
 ```javascript
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()

@@ -1,0 +1,15 @@
+{
+  "name": "bullneo",
+  "version": "0.1.7",
+  "private": true,
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json && node scripts/copy-build.mjs && prettier --write src/bullneo.ts bullneo.js",
+    "format": "prettier --write src/bullneo.ts bullneo.js",
+    "validate": "npm run build && node --check bullneo.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "typescript": "^5.9.3"
+  }
+}
