@@ -10,7 +10,7 @@ chromeなら、ブックマークバーに「ページを追加」で、URLを�
 お絵かきレス画面を表示してブックマークレットを起動してください
 
 ```javascript
-javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://raw.githubusercontent.com/sakots/bullneo/main/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
+javascript:(async()=>{const i='bullneo-loader';if(window.BullNeo&&typeof window.BullNeo.install==='function'){window.BullNeo.install();return}if(document.getElementById(i))return;let v='main';try{const r=await fetch('https://api.github.com/repos/sakots/bullneo/commits/main',{cache:'no-store',credentials:'omit',headers:{Accept:'application/vnd.github+json'},referrerPolicy:'no-referrer'});if(r.ok){const j=await r.json();if(typeof j.sha==='string'&&/^[0-9a-f]{40}$/.test(j.sha))v=j.sha}}catch{}const s=document.createElement('script');s.id=i;s.charset='UTF-8';s.src='https://cdn.jsdelivr.net/gh/sakots/bullneo@'+v+'/bullneo.js'+(v==='main'?'?bullneo_debug=1&v='+Date.now():'?bullneo_debug=1');s.onerror=()=>{s.remove();alert('BULLNEOの読み込みに失敗しました。')};(document.head||document.documentElement).appendChild(s)})()
 ```
 
 ## 開発
@@ -48,7 +48,7 @@ window.BULLNEO_NEO_BASE = "https://example.com/path/to/neo/";
 外部テキストのパレットマトリクスを読み込む場合は、ブックマークレットの `bullneo.js` の URL に `bullneo_palette` を追加してください。省略した場合は、`bullneo.js` 内蔵のデフォルトパレットを使います。
 
 ```javascript
-javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://raw.githubusercontent.com/sakots/bullneo/main/bullneo.js?bullneo_palette=palette.txt&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
+javascript:(()=>{window.BULLNEO_PALETTE_URL='palette.txt';(async()=>{const i='bullneo-loader';if(window.BullNeo&&typeof window.BullNeo.install==='function'){window.BullNeo.install();return}if(document.getElementById(i))return;let v='main';try{const r=await fetch('https://api.github.com/repos/sakots/bullneo/commits/main',{cache:'no-store',credentials:'omit',headers:{Accept:'application/vnd.github+json'},referrerPolicy:'no-referrer'});if(r.ok){const j=await r.json();if(typeof j.sha==='string'&&/^[0-9a-f]{40}$/.test(j.sha))v=j.sha}}catch{}const s=document.createElement('script');s.id=i;s.charset='UTF-8';s.src='https://cdn.jsdelivr.net/gh/sakots/bullneo@'+v+'/bullneo.js'+(v==='main'?'?bullneo_debug=1&v='+Date.now():'?bullneo_debug=1');s.onerror=()=>{s.remove();alert('BULLNEOの読み込みに失敗しました。')};(document.head||document.documentElement).appendChild(s)})()})()
 ```
 
 `palette.txt` は `bullneo.js` からの相対パス、または絶対 URL を指定できます。
