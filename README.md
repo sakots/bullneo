@@ -30,7 +30,7 @@ npm run validate
 javascript:(function(){var d=document,s=d.createElement('script');s.charset='UTF-8';s.src='https://example.com/bullneo.js?bullneo_debug=1&v='+Date.now();(d.head||d.documentElement).appendChild(s)})()
 ```
 
-PaintBBS NEO は、デフォルトで `https://raw.githubusercontent.com/funige/neo/master/dist/` から読み込みます。
+PaintBBS NEO は起動時に `funige/neo` の最新コミットを確認し、jsDelivr 経由でそのコミットの `dist/neo.js` と `dist/neo.css` を読み込みます。GitHub API へ接続できない場合は `https://oekakibbs.moe/apps/neo/` へフォールバックします。
 読み込み元を変更する場合は、`bullneo.js` を読み込む前に `window.BULLNEO_NEO_BASE` を設定してください。
 
 ```javascript

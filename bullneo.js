@@ -9,8 +9,11 @@
   "use strict";
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
   const BULLNEO_VERSION = "0.1.7";
-  const DEFAULT_NEO_BASE =
-    "https://raw.githubusercontent.com/funige/neo/master/dist/";
+  const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
+  const NEO_GITHUB_REPOSITORY = "funige/neo";
+  const NEO_GITHUB_BRANCH = "master";
+  const NEO_LATEST_COMMIT_URL = `https://api.github.com/repos/${NEO_GITHUB_REPOSITORY}/commits/${NEO_GITHUB_BRANCH}`;
+  const NEO_JSDELIVR_BASE = `https://cdn.jsdelivr.net/gh/${NEO_GITHUB_REPOSITORY}`;
   const MODAL_ID = "bullneo-modal";
   const PANEL_ID = "bullneo-panel";
   const MOUNT_ID = "bullneo-mount";
@@ -70,6 +73,7 @@
   const state = {
     baseUrl: detectBaseUrl(),
     neoBaseUrl: detectNeoBaseUrl(),
+    neoBaseUrlPromise: null,
     targetForm: null,
     neoReady: false,
     mounted: false,
@@ -101,6 +105,43 @@
   }
   function resolveNeoAsset(path) {
     return new URL(path, state.neoBaseUrl).href;
+  }
+  async function resolveLatestNeoBaseUrl() {
+    if (state.neoBaseUrlPromise) return state.neoBaseUrlPromise;
+    state.neoBaseUrlPromise = (async () => {
+      if (window.BULLNEO_NEO_BASE) {
+        debugLog("using configured NEO base URL: " + state.neoBaseUrl);
+        return state.neoBaseUrl;
+      }
+      try {
+        const response = await fetch(NEO_LATEST_COMMIT_URL, {
+          cache: "no-store",
+          credentials: "omit",
+          headers: { Accept: "application/vnd.github+json" },
+          referrerPolicy: "no-referrer",
+        });
+        if (!response.ok) {
+          throw new Error("GitHub API: " + response.status);
+        }
+        const data = await response.json();
+        const sha =
+          data && typeof data === "object" && "sha" in data ? data.sha : null;
+        if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) {
+          throw new Error(
+            "GitHub APIからNEOのコミットSHAを取得できませんでした。",
+          );
+        }
+        state.neoBaseUrl = `${NEO_JSDELIVR_BASE}@${sha}/dist/`;
+        debugLog("resolved latest NEO source: " + sha);
+      } catch (error) {
+        console.warn(
+          "[BULLNEO] 最新のPaintBBS NEOを取得できないため既定の配信URLを使用します。",
+          error,
+        );
+      }
+      return state.neoBaseUrl;
+    })();
+    return state.neoBaseUrlPromise;
   }
   function addCacheBustDate(url) {
     const parsed = new URL(url, location.href);
@@ -863,6 +904,7 @@ a.${OPEN_BUTTON_CLASS} {
     );
   }
   async function ensureAssets() {
+    await resolveLatestNeoBaseUrl();
     loadStyleOnce(addCacheBustDate(resolveNeoAsset("neo.css")));
     await loadScriptOnce(addCacheBustDate(resolveNeoAsset("neo.js")));
     applyCanvasBackgroundPatch();
