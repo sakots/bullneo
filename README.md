@@ -24,6 +24,19 @@ npm run validate
 
 `npm run validate` は TypeScript から `bullneo.js` を生成し、生成結果の JavaScript 構文を検証します。型だけを検査する場合は `npm run typecheck` を使用します。
 
+### 背景色の回帰テスト
+
+NEO 1.8.12の固定コミットを使用し、初期表示・クリア後・投稿フォームへ反映するPNGの背景色が `#f1e0d8` であることと、描画色が保持されることを実画素で確認します。
+
+```bash
+npx tsc bullneoTest/background.test.ts --target ES2022 --module ES2022 --strict --outDir .build/tests
+python3 -m http.server 8765 --bind 127.0.0.1
+```
+
+`npm run validate` の後、上記を実行し、ブラウザで `http://127.0.0.1:8765/bullneoTest/background.test.html` を開いて `PASS` を確認してください。NEOの取得にはjsDelivrへの接続が必要です。テストは確認用フォームだけを使用し、掲示板への投稿は行いません。
+
+### 配布とNEOの読み込み
+
 生成された `bullneo.js` を HTTP(S) で置いて、`can.php` と同じ流儀のブックマークレットから読み込みます。`example.com` は実際に配置したホスト名へ置き換えてください。
 
 ```javascript
@@ -80,6 +93,8 @@ javascript:(()=>{window.BULLNEO_PALETTE_URL='palette.txt';(async()=>{const i='bu
 
 ### [2026/11/02] v0.2.0
 
+- NEO 1.8系でキャンバスと反映するPNGの背景色が白になる問題を修正し、ふたば既定色の `#f1e0d8` に統一。
+- 背景色と描画色を実画素で確認するブラウザ回帰テストを追加。
 - 開発手順を明確にするため、AGENTS.mdにOpenSpec運用、生成物の更新方法、動作確認手順を追加。
 - changelog.mdに更新履歴を追加。
 

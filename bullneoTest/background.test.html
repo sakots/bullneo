@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <meta charset="utf-8" />
+  <title>BULLNEO 背景色回帰テスト</title>
+  <h1>BULLNEO 背景色回帰テスト</h1>
+  <pre id="result">実行中...</pre>
+  <iframe
+    title="NEO 1.8.12 確認フォーム"
+    style="width: 100%; height: 1000px"
+  ></iframe>
+  <script type="module">
+    import {
+      neoBase,
+      runBackgroundRegression,
+    } from "../.build/tests/background.test.js";
+
+    const result = document.getElementById("result");
+    try {
+      const response = await fetch("index.html");
+      if (!response.ok) throw new Error(`fixture: HTTP ${response.status}`);
+      const fixture = await response.text();
+      const frame = document.querySelector("iframe");
+      const loaded = new Promise((resolve) =>
+        frame.addEventListener("load", resolve, { once: true }),
+      );
+      frame.srcdoc = fixture
+        .replace("<head>", `<head><base href="${location.href}">`)
+        .replace(
+          '<script src="../bullneo.js">',
+          `<script>window.confirm=()=>false;window.BULLNEO_NEO_BASE=${JSON.stringify(neoBase)};<\/script><script src="../bullneo.js">`,
+        );
+      await loaded;
+      const checks = await runBackgroundRegression(frame.contentWindow);
+      result.textContent = "PASS\n" + JSON.stringify(checks, null, 2);
+    } catch (error) {
+      result.textContent = "FAIL\n" + String(error);
+    }
+  </script>
+</html>
