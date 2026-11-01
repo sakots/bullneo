@@ -8,7 +8,7 @@
 (() => {
   "use strict";
   const FILE_INPUT_SELECTOR = 'input[type="file"]';
-  const BULLNEO_VERSION = "0.1.7";
+  const BULLNEO_VERSION = "0.2.1";
   const DEFAULT_NEO_BASE = "https://oekakibbs.moe/apps/neo/";
   const NEO_GITHUB_REPOSITORY = "funige/neo";
   const NEO_GITHUB_BRANCH = "master";

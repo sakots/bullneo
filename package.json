@@ -1,6 +1,6 @@
 {
   "name": "bullneo",
-  "version": "0.1.7",
+  "version": "0.2.1",
   "private": true,
   "scripts": {
     "build": "tsc --project tsconfig.build.json && node scripts/copy-build.mjs && prettier --write src/bullneo.ts bullneo.js && node scripts/build-bookmarklet-loader.mjs",
