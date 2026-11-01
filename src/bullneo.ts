@@ -89,7 +89,7 @@ interface Window {
   const FORM_SELECTOR = "form, div, section, td";
   const FILE_NAME_CANDIDATES = ["upfile", "up"];
   const DEFAULT_PALETTE_PATH = "defaultPalette.txt";
-  const CANVAS_BACKGROUND_COLOR = "#f0e0d6";
+  const CANVAS_BACKGROUND_COLOR = "#f1e0d8";
   const CACHE_BUST_DATE = String(Date.now());
   const DEFAULT_PALETTE_TEXT = `!Palette
 #000000
@@ -450,8 +450,8 @@ a.${OPEN_BUTTON_CLASS} {
   function isInsideBullneo(node: Element | null): boolean {
     return Boolean(
       node &&
-        node.closest &&
-        (node.closest("#" + MODAL_ID) || node.closest("#" + PANEL_ID)),
+      node.closest &&
+      (node.closest("#" + MODAL_ID) || node.closest("#" + PANEL_ID)),
     );
   }
 
@@ -1079,24 +1079,17 @@ a.${OPEN_BUTTON_CLASS} {
     await resolveLatestNeoBaseUrl();
     loadStyleOnce(addCacheBustDate(resolveNeoAsset("neo.css")));
     await loadScriptOnce(addCacheBustDate(resolveNeoAsset("neo.js")));
-    applyCanvasBackgroundPatch();
     state.neoReady = true;
   }
 
-  function applyCanvasBackgroundPatch(): void {
-    if (
-      !window.Neo ||
-      !window.Neo.Painter ||
-      window.Neo.Painter.prototype.__bullneoBackgroundPatched
-    ) {
-      return;
-    }
+  function applyCanvasBackgroundToPainter(): void {
+    const painter = window.Neo && window.Neo.painter;
+    if (!painter) return;
 
-    const proto = window.Neo.Painter.prototype;
-    proto.backgroundColor = CANVAS_BACKGROUND_COLOR;
-    proto.__bullneoBackgroundPatched = true;
+    // NEO 1.8 keeps Painter private and hardcodes white in both compositors.
+    painter.backgroundColor = CANVAS_BACKGROUND_COLOR;
 
-    proto.getImage = function (imageWidth, imageHeight) {
+    painter.getImage = function (imageWidth, imageHeight) {
       const width = this.canvasWidth;
       const height = this.canvasHeight;
       imageWidth = imageWidth || width;
@@ -1140,7 +1133,7 @@ a.${OPEN_BUTTON_CLASS} {
       return pngCanvas;
     };
 
-    proto.updateDestCanvas = function (x, y, width, height, useTemp) {
+    painter.updateDestCanvas = function (x, y, width, height, useTemp) {
       x = Math.floor(x);
       y = Math.floor(y);
 
@@ -1204,22 +1197,13 @@ a.${OPEN_BUTTON_CLASS} {
       }
       ctx.restore();
     };
-  }
-
-  function applyCanvasBackgroundToPainter(): void {
-    const painter = window.Neo && window.Neo.painter;
-    if (!painter) return;
-
-    painter.backgroundColor = CANVAS_BACKGROUND_COLOR;
-    if (typeof painter.updateDestCanvas === "function") {
-      painter.updateDestCanvas(
-        0,
-        0,
-        painter.canvasWidth,
-        painter.canvasHeight,
-        false,
-      );
-    }
+    painter.updateDestCanvas(
+      0,
+      0,
+      painter.canvasWidth,
+      painter.canvasHeight,
+      false,
+    );
   }
 
   function buildNeoMarkup(width: number, height: number): string {
