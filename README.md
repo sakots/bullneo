@@ -78,6 +78,11 @@ javascript:(()=>{window.BULLNEO_PALETTE_URL='palette.txt';(async()=>{const i='bu
 
 ## 更新履歴
 
+### [2026/11/02] v0.2.0
+
+- 開発手順を明確にするため、AGENTS.mdにOpenSpec運用、生成物の更新方法、動作確認手順を追加。
+- changelog.mdに更新履歴を追加。
+
 ### [2026/08/20] v0.2.0
 
 - typescriptに
